@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "multigent": {
+      "args": [
+        "runtime",
+        "mcp-server"
+      ],
+      "command": "mga"
+    }
+  }
+}

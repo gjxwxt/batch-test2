@@ -64,7 +64,46 @@
 
 ---
 
-## 4. 统一错误响应格式 (Uniform Error Response)
+## 4. 管理员认证接口 (Admin Auth)
+
+> 鉴权语义：`/api/v1/admin/**` 除 `login` 外均需携带 `Authorization: Bearer <JWT>`。
+> JWT 过期 → `AUTH_002`（HTTP 401）。
+
+### 4.1 管理员登录 (IAS_AUTH_LOGIN)
+- **路径**：`POST /api/v1/admin/login`（无鉴权）
+- **请求体**：
+```json
+{
+  "username": "admin",
+  "password": "Admin@123456"
+}
+```
+- **响应 (200 OK)**：
+```json
+{
+  "token": "<JWT>",
+  "username": "admin",
+  "tokenType": "Bearer"
+}
+```
+- **响应 (401 Unauthorized)**：用户名或密码错误 → `AUTH_001`。
+
+### 4.2 修改密码 (IAS_AUTH_CHANGE_PWD)
+- **路径**：`PUT /api/v1/admin/password`（JWT 鉴权）
+- **请求体**：
+```json
+{
+  "oldPassword": "Admin@123456",
+  "newPassword": "NewPass@2026"
+}
+```
+- **响应 (200 OK)**：修改成功。
+- **响应 (400 Bad Request)**：旧密码错误 → `USER_003`；新密码复杂度不足 → `USER_004`。
+- **响应 (401 Unauthorized)**：令牌缺失/无效/过期 → `AUTH_002`。
+
+---
+
+## 5. 统一错误响应格式 (Uniform Error Response)
 
 当请求失败（4xx 或 5xx）时，服务端严格返回统一格式的 JSON：
 

@@ -1,5 +1,6 @@
 package com.example.app.controller;
 
+import com.example.app.auth.JwtTokenService;
 import com.example.app.exception.GlobalExceptionHandler;
 import com.example.app.exception.ResourceNotFoundException;
 import com.example.app.model.CreateItemRequest;
@@ -35,6 +36,9 @@ class ItemControllerTest {
 
     @MockBean
     private ItemService itemService;
+
+    @MockBean
+    private JwtTokenService jwtTokenService;
 
     @Test
     @DisplayName("GET /api/v1/items returns list of items with 200 OK")

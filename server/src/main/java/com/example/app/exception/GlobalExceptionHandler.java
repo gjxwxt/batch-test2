@@ -24,6 +24,38 @@ public class GlobalExceptionHandler {
                 .body(ApiErrorResponse.of("RESOURCE_NOT_FOUND", ex.getMessage()));
     }
 
+    @ExceptionHandler(AuthException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthException(AuthException ex) {
+        ErrorCode code = ex.getErrorCode();
+        HttpStatus status = httpStatusForErrorCode(code);
+        log.warn("Auth error [{}]: {}", code.getCode(), ex.getMessage());
+        return ResponseEntity.status(status)
+                .body(ApiErrorResponse.of(code.getCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(JwtAuthenticationException.class)
+    public ResponseEntity<ApiErrorResponse> handleJwtAuthentication(JwtAuthenticationException ex) {
+        log.warn("JWT authentication failed: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiErrorResponse.of(ErrorCode.AUTH_002.getCode(), ex.getMessage()));
+    }
+
+    @ExceptionHandler(LicenseValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleLicenseValidation(LicenseValidationException ex) {
+        log.warn("License validation failed: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiErrorResponse.of(ErrorCode.LICENSE_002.getCode(), ex.getMessage()));
+    }
+
+    private HttpStatus httpStatusForErrorCode(ErrorCode code) {
+        return switch (code) {
+            case AUTH_001, AUTH_002 -> HttpStatus.UNAUTHORIZED;
+            case USER_001 -> HttpStatus.NOT_FOUND;
+            case USER_003, USER_004, PARAM_001 -> HttpStatus.BAD_REQUEST;
+            default -> HttpStatus.BAD_REQUEST;
+        };
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
         List<String> details = new ArrayList<>();

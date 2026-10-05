@@ -17,9 +17,9 @@ class HealthControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    @DisplayName("GET /api/health returns 200 OK with status UP and service name")
+    @DisplayName("GET /api/v1/health returns 200 OK with status UP and service name")
     void shouldReturnHealthStatusUp() throws Exception {
-        mockMvc.perform(get("/api/health")
+        mockMvc.perform(get("/api/v1/health")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))

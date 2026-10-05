@@ -1,0 +1,14 @@
+# 测试环境配置（O3 裁决）：单测用内存库 H2（PostgreSQL 兼容模式）。
+# 双节点并发配额一致性（req-28）用 Testcontainers PostgreSQL 12+ 双进程复现（见 wp-7 集成测试）。
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jpa:
+    hibernate:
+      ddl-auto: none

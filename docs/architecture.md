@@ -55,7 +55,19 @@
 
 ---
 
-## 3. 前端分层约定 (`web/`)
+## 3. 客户端 SDK 分层约定 (`sdk/`)
+
+独立 Gradle 模块，产出可嵌入 JAR（`ias-auth-sdk-1.0.0.jar`），供客户端应用嵌入以对接
+IAS 授权认证中心的客户端侧（无鉴权）接口。
+
+- **`com.example.sdk`** — 入口 `SdkClient`，封装注册/心跳/公钥/心跳配置/授权文件申请。
+- **`com.example.sdk.model`** — 不可变 Java 21 `record` DTO。
+- **`com.example.sdk.crypto`** — `LicenseSignatureVerifier`：RSA-2048 + SHA256withRSA 签名校验，
+  规范字段序 + 盐前缀 `InforSuiteAuth2026_`。
+- **`com.example.sdk.http`** — JDK `java.net.http.HttpClient` 传输与 JSON 编解码（不依赖 Spring）。
+- **`com.example.sdk.exception`** — `SdkException` + 共享错误码 `SdkErrorCode`。
+
+## 4. 前端分层约定 (`web/`)
 
 - **`src/types/`**: 所有后端 DTO 对应的 TypeScript interface / type 定义。
 - **`src/services/`**: 封装所有 API 异步交互函数，严禁在 UI 组件直接写原生 fetch。

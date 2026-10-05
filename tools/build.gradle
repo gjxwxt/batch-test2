@@ -1,0 +1,42 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.example'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+application {
+    mainClass = 'com.example.tools.cli.LicenseToolCli'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Build a self-contained executable JAR with the Main-Class manifest entry.
+tasks.named('jar') {
+    manifest {
+        attributes(
+            'Main-Class': 'com.example.tools.cli.LicenseToolCli',
+            'Implementation-Title': 'IAS Auth Center License Generation Tool',
+            'Implementation-Version': project.version
+        )
+    }
+}

@@ -1,85 +1,76 @@
-# 共享契约 · API 骨架（infra:api-skeleton）
+# API 骨架契约 (API Skeleton Contract)
 
-> 冻结基线（wp-0）。路径/鉴权/错误语义为所有并行工作包的 HTTP 接缝。
-> 需求来源：`center模式-服务端需求文档(1).md` 6.2 节 Use Case → API 路径映射。
+> 共享契约条目：`infra:api-skeleton`
+> 承载基线 commit：`448ca97f482f6593bac1321a3f7827027c0921a4`
+> 分支：`feature/t-20261004-fu91es`
 
-## 路径前缀
+本文档冻结 IAS 授权中心（IAS Auth Center）对外暴露的全部 RESTful API 路径、HTTP 方法与鉴权要求。下游工作包（wp-1..wp-10）必须严格遵循本契约实现，不得擅自增删或改写路径。
 
-- `/api/v1/admin/**` — 管理控制台接口，**JWT 鉴权**（除 login）。
-- `/api/v1/license/**` — 客户端 SDK 接口，**无鉴权**（注册/心跳/公钥/心跳配置/文件申请）。
-- `/api/v1/health` — 健康检查，无鉴权。
+## 1. 基础约定
 
-## 端点清单
+- **根路径**：业务 API 统一使用 `/api/v1` 前缀；健康检查使用 `/api/health`。
+- **传输编码**：请求与响应体统一为 UTF-8 JSON（`Content-Type: application/json`）。
+- **时间格式**：ISO 8601 字符串，如 `2026-09-09T14:30:00Z`。
+- **鉴权前缀**：
+  - `/api/v1/admin/**` —— 需 JWT 鉴权（除登录外）。
+  - `/api/v1/license/**` —— 无鉴权（客户端注册 / 心跳 / 公钥）。
+  - `/api/v1/health` —— 无鉴权。
 
-### 认证 / 管理员（admin）
-| Use Case | 方法 | 路径 | 鉴权 |
-|----------|------|------|------|
-| IAS_AUTH_LOGIN | POST | /api/v1/admin/login | 无 |
-| IAS_AUTH_CHANGE_PWD | PUT | /api/v1/admin/password | JWT |
+## 2. 端点清单
 
-### 授权管理（admin）
-| Use Case | 方法 | 路径 | 鉴权 |
-|----------|------|------|------|
-| IAS_AUTH_IMPORT | POST | /api/v1/admin/licenses/import | JWT |
-| IAS_AUTH_TAMPER_CHECK | GET | /api/v1/admin/licenses/{id}/verify | JWT |
-| IAS_AUTH_DELETE | DELETE | /api/v1/admin/licenses/{id} | JWT |
-| IAS_AUTH_DISABLE | PUT | /api/v1/admin/licenses/{id}/disable | JWT |
-| IAS_AUTH_LIST | GET | /api/v1/admin/licenses | JWT |
-| IAS_AUTH_DETAIL | GET | /api/v1/admin/licenses/{id} | JWT |
+### 2.1 管理端（`/api/v1/admin/**`，JWT）
 
-### 客户端交互（license，无鉴权）
-| Use Case | 方法 | 路径 | 鉴权 |
-|----------|------|------|------|
-| IAS_AUTH_PUBLIC_KEY | GET | /api/v1/license/public-key | 无 |
-| IAS_AUTH_HB_CONFIG | GET | /api/v1/license/heartbeat-config | 无 |
-| IAS_AUTH_REGISTER | POST | /api/v1/license/register | 无 |
-| IAS_AUTH_HEARTBEAT | POST | /api/v1/license/heartbeat | 无 |
-| IAS_AUTH_FILE_APPLY | POST | /api/v1/license/file-apply | 无 |
+| # | 方法 | 路径 | 用例 | 鉴权 |
+|---|------|------|------|------|
+| 1 | POST | `/api/v1/admin/login` | IAS_AUTH_LOGIN | 无 |
+| 2 | PUT | `/api/v1/admin/password` | IAS_AUTH_CHANGE_PWD | JWT |
+| 3 | POST | `/api/v1/admin/licenses/import` | IAS_AUTH_IMPORT | JWT |
+| 4 | GET | `/api/v1/admin/licenses` | IAS_AUTH_LIST | JWT |
+| 5 | GET | `/api/v1/admin/licenses/{id}` | IAS_AUTH_DETAIL | JWT |
+| 6 | GET | `/api/v1/admin/licenses/{id}/verify` | IAS_AUTH_TAMPER_CHECK | JWT |
+| 7 | DELETE | `/api/v1/admin/licenses/{id}` | IAS_AUTH_DELETE | JWT |
+| 8 | PUT | `/api/v1/admin/licenses/{id}/disable` | IAS_AUTH_DISABLE | JWT |
+| 9 | GET | `/api/v1/admin/instances` | IAS_AUTH_INST_LIST | JWT |
+| 10 | GET | `/api/v1/admin/instances/offline` | IAS_AUTH_INST_OFFLINE | JWT |
+| 11 | GET | `/api/v1/admin/instances/history` | IAS_AUTH_INST_HISTORY | JWT |
+| 12 | GET | `/api/v1/admin/instances/{id}` | IAS_AUTH_INST_DETAIL | JWT |
+| 13 | GET | `/api/v1/admin/statistics` | IAS_AUTH_STAT_OVERVIEW | JWT |
+| 14 | GET | `/api/v1/admin/statistics/trend` | IAS_AUTH_STAT_TREND | JWT |
+| 15 | GET | `/api/v1/admin/statistics/dashboard-v2` | IAS_AUTH_DASHBOARD | JWT |
+| 16 | GET | `/api/v1/admin/statistics/alerts` | IAS_AUTH_ALERTS | JWT |
+| 17 | GET | `/api/v1/admin/statistics/export` | IAS_AUTH_STAT_EXPORT | JWT |
+| 18 | GET | `/api/v1/admin/audit-logs` | IAS_AUTH_AUDIT | JWT |
+| 19 | GET | `/api/v1/admin/config` | IAS_AUTH_CONFIG_VIEW | JWT |
+| 20 | PUT | `/api/v1/admin/config/heartbeat` | IAS_AUTH_CONFIG_HB | JWT |
+| 21 | POST | `/api/v1/admin/config/reload` | IAS_AUTH_CONFIG_RELOAD | JWT |
 
-### 实例监控（admin）
-| Use Case | 方法 | 路径 | 鉴权 |
-|----------|------|------|------|
-| IAS_AUTH_INST_LIST | GET | /api/v1/admin/instances | JWT |
-| IAS_AUTH_INST_OFFLINE | GET | /api/v1/admin/instances/offline | JWT |
-| IAS_AUTH_INST_HISTORY | GET | /api/v1/admin/instances/history | JWT |
-| IAS_AUTH_INST_DETAIL | GET | /api/v1/admin/instances/{id} | JWT |
+### 2.2 客户端（`/api/v1/license/**`，无鉴权）
 
-### 统计与仪表盘（admin，O2 纳入）
-| Use Case | 方法 | 路径 | 鉴权 |
-|----------|------|------|------|
-| IAS_AUTH_STAT_OVERVIEW | GET | /api/v1/admin/statistics | JWT |
-| IAS_AUTH_STAT_TREND | GET | /api/v1/admin/statistics/trend | JWT |
-| IAS_AUTH_DASHBOARD | GET | /api/v1/admin/statistics/dashboard-v2 | JWT |
-| IAS_AUTH_ALERTS | GET | /api/v1/admin/statistics/alerts | JWT |
-| IAS_AUTH_STAT_EXPORT | GET | /api/v1/admin/statistics/export | JWT |
+| # | 方法 | 路径 | 用例 | 鉴权 |
+|---|------|------|------|------|
+| 22 | GET | `/api/v1/license/public-key` | IAS_AUTH_PUBLIC_KEY | 无 |
+| 23 | GET | `/api/v1/license/heartbeat-config` | IAS_AUTH_HB_CONFIG | 无 |
+| 24 | POST | `/api/v1/license/register` | IAS_AUTH_REGISTER | 无 |
+| 25 | POST | `/api/v1/license/heartbeat` | IAS_AUTH_HEARTBEAT | 无 |
+| 26 | POST | `/api/v1/license/file-apply` | IAS_AUTH_FILE_APPLY | 无 |
 
-### 审计 / 配置（admin）
-| Use Case | 方法 | 路径 | 鉴权 |
-|----------|------|------|------|
-| IAS_AUTH_AUDIT | GET | /api/v1/admin/audit-logs | JWT |
-| IAS_AUTH_CONFIG_VIEW | GET | /api/v1/admin/config | JWT |
-| IAS_AUTH_CONFIG_HB | PUT | /api/v1/admin/config/heartbeat | JWT |
-| IAS_AUTH_CONFIG_RELOAD | POST | /api/v1/admin/config/reload | JWT |
+### 2.3 健康检查（无鉴权）
 
-### 健康检查
-| Use Case | 方法 | 路径 | 鉴权 |
-|----------|------|------|------|
-| IAS_AUTH_HEALTH | GET | /api/v1/health | 无 |
+| # | 方法 | 路径 | 用例 | 鉴权 |
+|---|------|------|------|------|
+| 27 | GET | `/api/health` | IAS_AUTH_HEALTH | 无 |
 
-## 鉴权语义
+## 3. 统一错误响应
 
-- 管理接口携带 `Authorization: Bearer <JWT>`；JWT 过期 → `AUTH_002`（HTTP 401）。
-- 客户端接口无鉴权，但注册/心跳请求体含签名（见 infra:signature 契约）。
+所有失败（4xx/5xx）返回统一格式：
 
-## 错误语义
+```json
+{
+  "code": "AUTH_001",
+  "message": "登录失败：用户名或密码错误",
+  "details": [],
+  "timestamp": "2026-09-09T14:30:00Z"
+}
+```
 
-- 统一 `ApiErrorResponse`（见 infra:error-codes）。HTTP 状态码映射：
-  - 400 → PARAM_001 / USER_003 / USER_004 / LICENSE_005
-  - 401 → AUTH_001 / AUTH_002
-  - 404 → LICENSE_001 / USER_001 / INSTANCE_002
-  - 409 → LICENSE_006
-  - 500 → SYS_001
-
-## 变更控制
-
-路径/鉴权为冻结契约。新增端点须经 contract_review 评审。
+错误码定义见 `server/src/main/java/com/example/app/exception/ErrorCode.java`（共享契约 `infra:error-codes`）。

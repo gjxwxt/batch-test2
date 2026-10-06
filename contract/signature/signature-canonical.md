@@ -1,40 +1,61 @@
-# 共享契约 · 签名 canonical 规范（infra:signature）
+# 签名规范契约 (Signature Canonical Contract)
 
-> 冻结基线（wp-0）。授权文件签发/验签、注册/心跳请求签名的统一规范。
-> 需求来源：`center模式-服务端需求文档(1).md` 4.1.1 / 4.2.1 / 4.5。
+> 共享契约条目：`infra:signature`
+> 承载基线 commit：`448ca97f482f6593bac1321a3f7827027c0921a4`
+> 分支：`feature/t-20261004-fu91es`
 
-## 两套独立 RSA 密钥（O6 裁决）
+本文档冻结 IAS 授权中心的授权文件签名规范。所有涉及授权签发、校验、注册与心跳的工作包必须严格遵循。
 
-| 密钥对 | 持有方 | 用途 |
-|--------|--------|------|
-| **签发密钥对** | 私钥：授权生成工具；公钥：客户端 SDK JAR 硬编码 + 服务端 | 签名/验签 license.infor 授权文件 |
-| **通信密钥对** | 私钥：服务端首次启动自动生成存库；公钥：通过接口分发 | 加密注册响应、签名注册/心跳请求与公钥分发响应 |
+## 1. 算法
 
-两套密钥**互不复用**。
+- **非对称加密**：RSA-2048
+- **签名算法**：SHA256withRSA
+- **编码**：签名结果 Base64 编码
 
-## 授权文件签名（license.infor）
+## 2. 双密钥对（O6）
 
-- 算法：**RSA-2048 + SHA256withRSA**。
-- 签名内容：授权文件中所有关键字段按**固定顺序**拼接为 canonical 字符串，加盐前缀 `InforSuiteAuth2026_`。
-- canonical 字段顺序（基础字段 + center 模式追加）：
-  `component, version, licensee, mode, formal, expiration, userinfor, proname, serial, center-required, max-instances, max-cpus, max-memory`
-- 签名值 Base64 编码存入 XML `<signature>` 节点。
-- 任何字段被修改都会导致验签失败。
+签发密钥对与通信密钥对**互不复用**：
 
-## 验签公钥加载
+- **签发密钥对**：用于签发 license 文件（服务端私钥签名，客户端公钥验签）。
+- **通信密钥对**：用于注册 / 心跳通信（客户端私钥签名，服务端公钥验签）。
 
-- 优先从 JVM 系统属性 `-Dlicense.company.pub.key` 读取。
-- 未设置则使用客户端 SDK JAR 包中硬编码的公钥。
+## 3. 盐前缀
 
-## 服务端自检（IAS_AUTH_SELF_CHECK）
+- 盐前缀：`InforSuiteAuth2026_`
 
-顺序执行，任一步失败即终止启动：
-1. 文件存在性检查（`license.self.path`，默认 `classpath:test_license/auth-center-local-license.infor`）
-2. 数字签名验证（SHA256withRSA）
-3. 组件标识匹配（`license.self.expected-component`，默认 `Server`，大小写不敏感）
-4. 产品标识匹配（`license.self.expected-proname`，默认 `AS`）
-5. 有效期校验（`never` 或日期格式，过期则失败）
+## 4. 规范化字段顺序 (Canonical Field Order)
 
-## 变更控制
+签名前，将以下字段按给定顺序拼接为规范化字符串（字段间以 `&` 连接，`key=value` 形式，空值省略）：
 
-canonical 字段顺序、盐值、算法为冻结契约。任何变更须经 contract_review 评审。
+```text
+component
+version
+licensee
+mode
+formal
+expiration
+userinfor
+proname
+serial
+center-required
+max-instances
+max-cpus
+max-memory
+```
+
+即规范化串形如：
+
+```text
+component=<component>&version=<version>&licensee=<licensee>&mode=<mode>&formal=<formal>&expiration=<expiration>&userinfor=<userinfor>&proname=<proname>&serial=<serial>&center-required=<center-required>&max-instances=<max-instances>&max-cpus=<max-cpus>&max-memory=<max-memory>
+```
+
+## 5. 校验流程
+
+1. 按上述字段顺序构造规范化字符串。
+2. 使用对应公钥对签名值执行 `SHA256withRSA` 验签。
+3. 验签失败返回 `LICENSE_004`（授权签名校验失败）。
+
+## 6. 承载载体
+
+- 可执行载体位于 `server/`。
+- 契约文档位于 `contract/`。

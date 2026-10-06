@@ -1,41 +1,45 @@
-# 共享契约 · 技术栈骨架（infra:scaffold）
+# 技术栈脚手架契约 (Tech Stack Scaffold Contract)
 
-> 冻结基线（wp-0）。技术栈与模块结构为所有并行工作包的构建接缝。
-> 需求来源：`center模式-服务端需求文档(1).md` 1.2 系统概述 + 需求澄清稿 §5 关键约束（O1/O3/O5）。
+> 共享契约条目：`infra:scaffold`
+> 承载基线 commit：`448ca97f482f6593bac1321a3f7827027c0921a4`
+> 分支：`feature/t-20261004-fu91es`
 
-## 技术栈（O1 裁决）
+本文档冻结 IAS 授权中心全栈技术选型与测试环境约定。所有工作包必须在此技术栈内实现。
 
-| 层 | 技术 | 说明 |
-|----|------|------|
-| 服务端 | Spring Boot 3.3.3 / Java 21 / Gradle | 分层 controller→service→repository→model |
-| ORM | MyBatis-Plus | 数据库访问（PostgreSQL 12+） |
-| 数据库 | PostgreSQL 12+ | 多节点共享，配额计数以数据库为准 |
-| 前端 | React 18 + TypeScript + Vite + Tailwind | 管理控制台 |
-| 测试 | JUnit 5 + MockMvc + Testcontainers | 单测内存库/嵌入 mock；双节点并发用 Testcontainers PG 双进程（O3/O7） |
+## 1. 后端 (Backend)
 
-## 模块结构（O5 裁决）
+- **语言 / 运行时**：Java 21
+- **框架**：Spring Boot 3.3.3
+- **构建**：Gradle
+- **ORM**：MyBatis-Plus
+- **数据库**：PostgreSQL 12+
+- **迁移**：Flyway（迁移脚本位于 `server/src/main/resources/db/migration/`）
 
-授权生成工具与客户端 SDK 以**独立 Gradle 模块 + 可执行/可嵌入 JAR** 产出，与服务端进程生命周期解耦：
+### 分层约束
+严格分层：`controller/` → `service/` → `repository/` → `model/`。
+- Controller 仅做参数校验、调用 Service、返回 DTO 与 HTTP 状态码。
+- 业务规则收敛在 Service。
+- 失败统一抛领域异常，由 `@RestControllerAdvice` 转换为 `ApiErrorResponse`。
 
-```
-server/                     # 授权中心服务端（Spring Boot）
-  ├── src/main/java/...     # controller / service / repository / model / exception / config
-  └── src/main/resources/db/migration/   # Flyway 迁移（V1__init_schema.sql）
-tools/                      # 授权生成工具（独立 Gradle 模块，可执行 JAR）
-sdk/                        # 客户端 SDK（独立 Gradle 模块，可嵌入 JAR）
-web/                        # 管理控制台前端（React 18 + TS + Vite + Tailwind）
-contract/                   # 共享契约（DDL / 错误码 / API 骨架 / 签名规范 / 技术栈）
-```
+## 2. 前端 (Frontend)
 
-## 分层与编码规则
+- **框架**：React 18
+- **语言**：TypeScript
+- **构建**：Vite
+- **样式**：Tailwind CSS
 
-- 严格分层：`controller/` → `service/` → `repository/` → `model/`。
-- Java 21 `record` 用于 DTO 与 API 请求/响应。
-- 统一 `ApiErrorResponse`（infra:error-codes）通过 `@RestControllerAdvice` 返回。
-- Controller 只校验输入、调用 service、返回 DTO 与正确 HTTP 状态码。
-- 前端所有网络请求走 `services/api.ts`，带 TypeScript 类型。
-- **TDD 先行**：先写失败测试验证验收标准，再实现业务代码。
+### 分层约束
+- `components/`：无状态或受控 UI 组件。
+- `pages/`：视图路由页面。
+- `services/api.ts`：所有 HTTP 请求收敛于此，强类型入参/出参。
+- `types/`：与后端 DTO 对齐的 TypeScript 类型。
 
-## 变更控制
+## 3. 测试环境 (Test Environment)
 
-技术栈与模块结构为冻结契约。新增依赖/模块须经 contract_review 评审。
+- **单元测试**：H2 数据库 PostgreSQL 兼容模式。
+- **集成测试**：Testcontainers PostgreSQL 12+（双节点并发，O3/O7 场景）。
+
+## 4. 交付基线
+
+- 后端测试：14/14 通过。
+- 前端测试：7/7 通过。

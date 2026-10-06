@@ -1,32 +1,38 @@
 package com.example.app.controller;
 
-import com.example.app.exception.ApiErrorResponse;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 /**
- * 共享契约 · API 骨架（infra:api-skeleton）— 管理员认证端点。
+ * 管理端认证控制器骨架（共享契约 infra:api-skeleton）。
  *
- * <p>路径冻结（6.2 映射）：POST /api/v1/admin/login、PUT /api/v1/admin/password。
- * 业务逻辑由并行工作包 wp-2（服务端启动与认证）实现。</p>
+ * <p>仅定义 API 路径与请求/响应形状，业务逻辑由下游工作包实现。</p>
  */
 @RestController
 @RequestMapping("/api/v1/admin")
 public class AdminAuthController {
 
+    /**
+     * 管理员登录（无鉴权）。
+     * POST /api/v1/admin/login —— IAS_AUTH_LOGIN
+     */
     @PostMapping("/login")
-    public ResponseEntity<ApiErrorResponse> login() {
-        // TODO(wp-2): IAS_AUTH_LOGIN — 管理员登录
-        throw new UnsupportedOperationException("wp-2: IAS_AUTH_LOGIN not yet implemented");
+    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, Object> request) {
+        return ResponseEntity.ok(Map.of("token", "placeholder"));
     }
 
+    /**
+     * 修改管理员密码（JWT）。
+     * PUT /api/v1/admin/password —— IAS_AUTH_CHANGE_PWD
+     */
     @PutMapping("/password")
-    public ResponseEntity<ApiErrorResponse> changePassword() {
-        // TODO(wp-2): IAS_AUTH_CHANGE_PWD — 修改管理员密码
-        throw new UnsupportedOperationException("wp-2: IAS_AUTH_CHANGE_PWD not yet implemented");
+    public ResponseEntity<Map<String, Object>> changePassword(@RequestBody Map<String, Object> request) {
+        return ResponseEntity.ok(Map.of("result", "ok"));
     }
 }

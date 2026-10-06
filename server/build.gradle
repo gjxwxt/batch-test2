@@ -22,7 +22,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
-// 共享契约 · 技术栈骨架（infra:scaffold）：MyBatis-Plus + PostgreSQL + Flyway
+    // 共享契约 · 技术栈骨架（infra:scaffold）：MyBatis-Plus + PostgreSQL + Flyway
     implementation 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.7'
     implementation 'org.postgresql:postgresql'
     implementation 'org.flywaydb:flyway-core'
@@ -36,12 +36,15 @@ dependencies {
     // BCrypt password hashing (spring-security-crypto, no full security starter)
     implementation 'org.springframework.security:spring-security-crypto'
 
-    // 测试：内存库（H2）用于单测；Testcontainers PostgreSQL 用于双节点并发集成（O3/O7）
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'com.h2database:h2'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Testcontainers PostgreSQL 集成测试（双节点并发回归，O3/O7 场景）
+    testImplementation 'org.testcontainers:junit-jupiter:1.19.8'
+    testImplementation 'org.testcontainers:postgresql:1.19.8'
 }
 
 tasks.named('test') {

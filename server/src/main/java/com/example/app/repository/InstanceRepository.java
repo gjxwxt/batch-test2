@@ -42,6 +42,7 @@ public class InstanceRepository {
                 Comparator.nullsLast(Comparator.reverseOrder())));
         return instances;
     }
+
     public Optional<Instance> findById(Long id) {
         return Optional.ofNullable(storage.get(id));
     }

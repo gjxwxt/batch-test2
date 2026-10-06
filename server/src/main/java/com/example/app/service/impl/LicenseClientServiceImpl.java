@@ -78,8 +78,13 @@ public class LicenseClientServiceImpl implements LicenseClientService {
             return reRegister(existing, license, request);
         }
 
-        // 4. 配额判定（INSTANCE_004 / INSTANCE_001）
-        checkQuota(license);
+// 4. 原子占用配额（req-27 弹性配额 / req-28 多节点一致性 CAS）
+        int elasticMultiplier = getElasticQuotaMultiplier();
+        boolean acquired = licenseRepository.tryAcquireInstanceQuota(license.id(), elasticMultiplier);
+        if (!acquired) {
+            throw new LicenseException(ErrorCode.INSTANCE_004,
+                    "配额超弹性上限（" + elasticMultiplier + " 倍）拒绝注册");
+        }
 
         // 5. 创建实例记录
         Instant now = Instant.now();
@@ -108,10 +113,7 @@ public class LicenseClientServiceImpl implements LicenseClientService {
         );
         instanceRepository.save(instance);
 
-        // 6. 更新授权配额计数
-        incrementUsedInstances(license);
-
-        int interval = parseIntConfig(SystemConfigRepository.KEY_HEARTBEAT_INTERVAL, 30);
+int interval = parseIntConfig(SystemConfigRepository.KEY_HEARTBEAT_INTERVAL, 30);
         return new RegisterResponse(instanceId, Instance.STATUS_ONLINE, interval, "注册成功");
     }
 
@@ -223,43 +225,13 @@ public class LicenseClientServiceImpl implements LicenseClientService {
         return new RegisterResponse(existing.instanceId(), Instance.STATUS_ONLINE, interval, "重注册成功");
     }
 
-    private void checkQuota(License license) {
-        int maxInstances = license.maxInstances() != null ? license.maxInstances() : 0;
-        int usedInstances = license.usedInstances() != null ? license.usedInstances() : 0;
-        if (maxInstances > 0 && usedInstances >= maxInstances * 2) {
-            throw new LicenseException(ErrorCode.INSTANCE_004, "配额超 200% 上限，拒绝注册");
-        }
-    }
-
-    private void incrementUsedInstances(License license) {
-        int used = license.usedInstances() != null ? license.usedInstances() : 0;
-        int remaining = license.remainingInstances() != null ? license.remainingInstances() : 0;
-        License updated = new License(
-                license.id(),
-                license.serial(),
-                license.licenseName(),
-                license.proname(),
-                license.component(),
-                license.version(),
-                license.licensee(),
-                license.licenseMode(),
-                license.formal(),
-                license.expiration(),
-                license.userinfor(),
-                license.maxInstances(),
-                license.maxCpus(),
-                license.maxMemory(),
-                used + 1,
-                Math.max(0, remaining - 1),
-                license.usedCpus(),
-                license.usedMemory(),
-                license.bxbFile(),
-                license.status(),
-                license.source(),
-                license.createTime(),
-                Instant.now()
-        );
-        licenseRepository.save(updated);
+/**
+     * 读取弹性配额倍数（req-27）。
+     *
+     * <p>来自 system_config.elastic.quota.multiplier，默认 2。非法值回退默认 2。</p>
+     */
+    private int getElasticQuotaMultiplier() {
+        return parseIntConfig(SystemConfigRepository.KEY_ELASTIC_QUOTA_MULTIPLIER, 2);
     }
 
     private void verifyRequestSignature(String canonical, String signature) {

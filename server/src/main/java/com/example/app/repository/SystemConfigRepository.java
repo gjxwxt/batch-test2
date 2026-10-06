@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentMap;
  * <p>对应共享契约 6 表 DDL 中的 {@code system_config} 表（infra:ddl）。
  * 预置 8 项默认配置（心跳 30s / 超时倍数 3 / 归档 30 天 / 历史删除 90 天等）。</p>
  *
- * <p>同时提供两套访问 API：wp-4/wp-5 依赖的 {@code KEY_*} 常量 + {@link #findValue}/{@link #getValueOrDefault}，
+ * <p>同时提供两套访问 API：wp-4/wp-5/wp-7 依赖的 {@code KEY_*} 常量 + {@link #findValue}/{@link #getValueOrDefault}，
  * 以及 wp-6 依赖的 {@link #findAll}/{@link #findByKey}/{@link #save}（基于 {@link SystemConfig} 模型）。</p>
  */
 @Repository
@@ -31,6 +31,8 @@ public class SystemConfigRepository {
     public static final String KEY_ARCHIVE_AFTER_DAYS = "archive.after.days";
     /** 历史实例删除天数配置键。 */
     public static final String KEY_HISTORY_DELETE_AFTER_DAYS = "history.delete.after.days";
+    /** 弹性配额倍数配置键（req-27，默认 2，与 V1__init_schema.sql 种子一致）。 */
+    public static final String KEY_ELASTIC_QUOTA_MULTIPLIER = "elastic.quota.multiplier";
 
     private final ConcurrentMap<String, SystemConfig> storage = new ConcurrentHashMap<>();
 
@@ -47,7 +49,7 @@ public class SystemConfigRepository {
         put(5L, "archive.cron", "0 22 10 * * ?", "归档定时 Cron 表达式", now);
         put(6L, "expire.check.cron", "0 0 0 * * ?", "过期检查定时 Cron 表达式", now);
         put(7L, "login.token.ttl.minutes", "120", "登录令牌 TTL（分钟）", now);
-        put(8L, "elastic.quota.warning.ratio", "2", "弹性配额倍数", now);
+        put(8L, KEY_ELASTIC_QUOTA_MULTIPLIER, "2", "弹性配额倍数", now);
     }
 
     private void put(Long id, String key, String value, String desc, Instant time) {
@@ -71,7 +73,7 @@ public class SystemConfigRepository {
         return config;
     }
 
-    // ---- wp-4/wp-5 API（基于字符串键值） ----
+    // ---- wp-4/wp-5/wp-7 API（基于字符串键值） ----
 
     public Optional<String> findValue(String key) {
         SystemConfig config = storage.get(key);

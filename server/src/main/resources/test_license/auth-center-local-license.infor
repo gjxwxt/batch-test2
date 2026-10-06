@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<license>
+  <component>Server</component>
+  <version>1.0</version>
+  <licensee>InforSuite Auth Center</licensee>
+  <mode>center</mode>
+  <formal>true</formal>
+  <expiration>never</expiration>
+  <userinfor>auth-center</userinfor>
+  <proname>AS</proname>
+  <serial>auth-center-local-001</serial>
+  <center-required>true</center-required>
+  <max-instances>100</max-instances>
+  <max-cpus>64</max-cpus>
+  <max-memory>131072</max-memory>
+  <signature>8GW0KgEz9exBQwHr6FsbK+V6U15mg1E9GGie4tuRPk0ilq0zju3Dslp5VaKFXHtiW/HCMjQNIqoR66dYcp4LNtQr/OMJOw0vsGWtCOQ7FfU5irr2qA8t3us+rFeOOJ7+DcN998nPH2ZrMZVqyBTFYx5+6vIEsZCCdB6J84ENTDAWWwNZBsMYhfbbBDTn2V2IYff0H/zIaBmuK6nqKxjoIeNQDkgCRNfwda9ryK0M9E8BiILVG8Ooh+RL8vsiXHpkRwKI2RvNr1+ci1Zw809np+ceULOXzqvvzyViG5q7ig9MdVEZCnudCrxZjsEqfgEdUwe/m8NRZtpHiKWyltQRqQ==</signature>
+</license>

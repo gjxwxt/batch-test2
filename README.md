@@ -33,6 +33,12 @@
 │       │       ├── model/         # 实体、DTO 与请求/响应 Record
 │       │       └── exception/     # 全局异常捕获与标准错误响应
 │       └── test/                  # 单元测试与 MockMvc 切片测试
+├── sdk/                       # IAS 授权认证中心客户端 SDK (独立 Gradle 模块, 可嵌入 JAR)
+│   ├── build.gradle
+│   ├── gradlew
+│   └── src/
+│       ├── main/java/com/example/sdk/   # SdkClient, model, crypto, http, exception
+│       └── test/java/com/example/sdk/   # 单元测试
 └── web/                       # React 18 SPA 前端 (Vite, TS, Tailwind)
     ├── package.json
     ├── vite.config.ts
@@ -65,6 +71,19 @@ make dev-frontend
 # 或在 web/ 目录下:
 npm install && npm run dev
 ```
+
+### 数据源配置
+- **默认 profile**：使用内嵌 H2（PostgreSQL 兼容模式）作为数据源，服务端开箱即启动
+  （`GET /api/v1/health` 返回 `UP`），Flyway 迁移与原子 SQL/CAS 配额（req-28）在本地无
+  PostgreSQL 环境下可运行。
+- **生产 profile**：连接真实 PostgreSQL 12+ 多节点共享库，实现配额强一致（req-28 / O7）：
+  ```bash
+  SPRING_PROFILES_ACTIVE=prod \
+  DB_URL=jdbc:postgresql://<host>:5432/ias_auth \
+  DB_USERNAME=<user> DB_PASSWORD=<pass> \
+  ./gradlew bootRun
+  ```
+  数据源参数均可通过环境变量注入（`DB_URL` / `DB_USERNAME` / `DB_PASSWORD` / `DB_DRIVER`）。
 
 ### 运行测试
 ```bash

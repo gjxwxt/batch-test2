@@ -22,8 +22,33 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
 
+    // 共享契约 · 技术栈骨架（infra:scaffold）：MyBatis-Plus + PostgreSQL + Flyway
+    implementation 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.7'
+    implementation 'org.postgresql:postgresql'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+
+    // JWT (io.jsonwebtoken 0.12.6)
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    // BCrypt password hashing (spring-security-crypto, no full security starter)
+    implementation 'org.springframework.security:spring-security-crypto'
+
+    // 内嵌 H2（PostgreSQL 兼容模式）作为默认 profile 数据源，保证服务端开箱即启动（AUTH-004）。
+    // 生产部署使用 prod profile 连接真实 PostgreSQL（application-prod.yml）。
+    runtimeOnly 'com.h2database:h2'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'com.h2database:h2'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Testcontainers PostgreSQL 集成测试（双节点并发回归，O3/O7 场景）
+    testImplementation 'org.testcontainers:junit-jupiter:1.19.8'
+    testImplementation 'org.testcontainers:postgresql:1.19.8'
 }
 
 tasks.named('test') {

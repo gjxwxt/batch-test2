@@ -1,0 +1,594 @@
+[
+  {
+    "case_id": "AUTH-001",
+    "ac_id": "req-1",
+    "risk_level": "high",
+    "automation_level": "unit",
+    "execution_type": "auto",
+    "expected_result": "genkey 成功退出码 0，产出 RSA-2048 公私钥文件，公钥可被 verify 加载，密钥对为 RSA-2048"
+  },
+  {
+    "case_id": "AUTH-002",
+    "ac_id": "req-1",
+    "risk_level": "high",
+    "automation_level": "unit",
+    "execution_type": "auto",
+    "expected_result": "sign 成功退出码 0，license.infor 含 <signature> 节点，用公钥 verify 验签通过"
+  },
+  {
+    "case_id": "AUTH-003",
+    "ac_id": "req-1",
+    "risk_level": "high",
+    "automation_level": "unit",
+    "execution_type": "auto",
+    "expected_result": "原文件验签通过；任一 canonical 字段被修改或使用错误公钥时验签失败（退出码非 0）"
+  },
+  {
+    "case_id": "AUTH-004",
+    "ac_id": "req-2",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "服务端启动成功，GET /api/v1/health 返回 {code:SUCCESS, data:{status:UP}}"
+  },
+  {
+    "case_id": "AUTH-005",
+    "ac_id": "req-2",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "启动进程退出（非 0），日志含签名验证失败错误，服务不可用"
+  },
+  {
+    "case_id": "AUTH-006",
+    "ac_id": "req-2",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "启动进程退出（非 0），日志含授权过期错误，服务不可用"
+  },
+  {
+    "case_id": "AUTH-007",
+    "ac_id": "req-3",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "缓存中 ACTIVE 授权数量与数据库一致；admin/Admin@123456 可登录；审计日志含初始化事件"
+  },
+  {
+    "case_id": "AUTH-008",
+    "ac_id": "req-4",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:SUCCESS, data:{token:<JWT>}}，JWT 可用于后续管理接口鉴权"
+  },
+  {
+    "case_id": "AUTH-009",
+    "ac_id": "req-4",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:AUTH_001}，HTTP 401，不返回令牌"
+  },
+  {
+    "case_id": "AUTH-010",
+    "ac_id": "req-5",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "修改返回 SUCCESS；新密码登录成功；旧密码登录返回 AUTH_001；审计日志含 PASSWORD_CHANGE"
+  },
+  {
+    "case_id": "AUTH-011",
+    "ac_id": "req-5",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:USER_003}，HTTP 400，原密码仍可登录"
+  },
+  {
+    "case_id": "AUTH-012",
+    "ac_id": "req-5",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:USER_004}，HTTP 400，原密码仍可登录"
+  },
+  {
+    "case_id": "AUTH-013",
+    "ac_id": "req-6",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，授权入库 status=ACTIVE，审计日志含 LICENSE_IMPORT"
+  },
+  {
+    "case_id": "AUTH-014",
+    "ac_id": "req-6",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:LICENSE_002}，HTTP 400，授权列表无新增"
+  },
+  {
+    "case_id": "AUTH-015",
+    "ac_id": "req-6",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:LICENSE_005}，HTTP 400，授权列表仍为一条"
+  },
+  {
+    "case_id": "AUTH-016",
+    "ac_id": "req-7",
+    "risk_level": "high",
+    "automation_level": "manual",
+    "execution_type": "manual",
+    "expected_result": "响应 SUCCESS {passed:true}；数据库字段被恢复为原始值；审计日志含字段修复记录；授权仍 ACTIVE"
+  },
+  {
+    "case_id": "AUTH-017",
+    "ac_id": "req-7",
+    "risk_level": "high",
+    "automation_level": "manual",
+    "execution_type": "manual",
+    "expected_result": "响应 code=LICENSE_002 或 {passed:false}；授权 status=DISABLED；审计日志含授权被篡改记录"
+  },
+  {
+    "case_id": "AUTH-018",
+    "ac_id": "req-7",
+    "risk_level": "high",
+    "automation_level": "manual",
+    "execution_type": "manual",
+    "expected_result": "响应 SUCCESS {passed:true}；remaining_instances 被修复为 max_instances-used_instances；审计日志含配额修复记录"
+  },
+  {
+    "case_id": "AUTH-019",
+    "ac_id": "req-7",
+    "risk_level": "high",
+    "automation_level": "manual",
+    "execution_type": "manual",
+    "expected_result": "响应 code=WARNING {passed:true, warning:Instance count mismatch}；实际在线数>max×2 时返回错误"
+  },
+  {
+    "case_id": "AUTH-020",
+    "ac_id": "req-8",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS；授权从列表消失；关联实例被清理；审计日志含 LICENSE_DELETE"
+  },
+  {
+    "case_id": "AUTH-021",
+    "ac_id": "req-8",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:LICENSE_006}，HTTP 409，授权仍存在"
+  },
+  {
+    "case_id": "AUTH-022",
+    "ac_id": "req-9",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "禁用返回 SUCCESS 授权 status=DISABLED；注册返回 LICENSE_001 不入库；审计日志含 LICENSE_DISABLE"
+  },
+  {
+    "case_id": "AUTH-023",
+    "ac_id": "req-10",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含过滤后的授权数组，分页字段 page/size/total 正确"
+  },
+  {
+    "case_id": "AUTH-024",
+    "ac_id": "req-11",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含 serial/status/license_mode/used_instances/remaining_instances/max_instances/max_cpus/max_memory/expiration 完整字段"
+  },
+  {
+    "case_id": "AUTH-025",
+    "ac_id": "req-12",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "通信密钥对生成成功，与签发密钥对互不复用，公钥经接口可获取"
+  },
+  {
+    "case_id": "AUTH-026",
+    "ac_id": "req-13",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含 PEM 格式 RSA 公钥，可被客户端加载"
+  },
+  {
+    "case_id": "AUTH-027",
+    "ac_id": "req-14",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS 含加密 instanceId；used_instances 递增；instance 表新增 ONLINE 记录；审计 INSTANCE_REGISTER SUCCESS"
+  },
+  {
+    "case_id": "AUTH-028",
+    "ac_id": "req-14",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 code=WARNING 含 instanceId；used_instances 递增；审计 INSTANCE_REGISTER WARNING"
+  },
+  {
+    "case_id": "AUTH-029",
+    "ac_id": "req-14",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:INSTANCE_004}；instance 表无新增；used_instances 不变"
+  },
+  {
+    "case_id": "AUTH-030",
+    "ac_id": "req-14",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:LICENSE_003}；instance 表无新增；used_cpus 不变"
+  },
+  {
+    "case_id": "AUTH-031",
+    "ac_id": "req-14",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:LICENSE_003}；instance 表无新增；used_cpus 与 used_memory 均不变（CPU 配额回滚）"
+  },
+  {
+    "case_id": "AUTH-032",
+    "ac_id": "req-14",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:PARAM_001}；instance 表无新增"
+  },
+  {
+    "case_id": "AUTH-033",
+    "ac_id": "req-14",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:LICENSE_001}；instance 表无新增"
+  },
+  {
+    "case_id": "AUTH-034",
+    "ac_id": "req-14",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:LICENSE_004}；授权 status=EXPIRED；instance 表无新增"
+  },
+  {
+    "case_id": "AUTH-035",
+    "ac_id": "req-15",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含 heartbeat_interval 与 timeout_multiplier，与 system_config 一致"
+  },
+  {
+    "case_id": "AUTH-036",
+    "ac_id": "req-16",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS；实例 last_heartbeat_time 更新为当前时间"
+  },
+  {
+    "case_id": "AUTH-037",
+    "ac_id": "req-16",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS；本节点内存新增该实例记录，实例状态保持 ONLINE"
+  },
+  {
+    "case_id": "AUTH-038",
+    "ac_id": "req-16",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS；实例 status=ONLINE；used_instances 重新 +1；审计日志含恢复记录"
+  },
+  {
+    "case_id": "AUTH-039",
+    "ac_id": "req-16",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:INSTANCE_002}；客户端 SDK 收到后触发重注册流程"
+  },
+  {
+    "case_id": "AUTH-040",
+    "ac_id": "req-16",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:INSTANCE_003}；客户端继续心跳并输出告警日志"
+  },
+  {
+    "case_id": "AUTH-041",
+    "ac_id": "req-17",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS；used_instances 不重复递增；实例记录不重复创建"
+  },
+  {
+    "case_id": "AUTH-042",
+    "ac_id": "req-37",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含 local 模式授权文件内容；审计日志含 FILE_APPLY"
+  },
+  {
+    "case_id": "AUTH-043",
+    "ac_id": "req-37",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含 site 模式授权文件内容；审计日志含 FILE_APPLY"
+  },
+  {
+    "case_id": "AUTH-044",
+    "ac_id": "req-18",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "实例 status=OFFLINE，offline_time 已记录；审计日志含 TIMEOUT；配额释放"
+  },
+  {
+    "case_id": "AUTH-045",
+    "ac_id": "req-19",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "instance 表移除该实例，history_instance 表新增记录含 offline_time/archived_time；审计 ARCHIVE"
+  },
+  {
+    "case_id": "AUTH-046",
+    "ac_id": "req-20",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "history_instance 表移除该记录；审计日志含 INSTANCE_DELETE"
+  },
+  {
+    "case_id": "AUTH-047",
+    "ac_id": "req-21",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含 ONLINE 实例数组，字段完整"
+  },
+  {
+    "case_id": "AUTH-048",
+    "ac_id": "req-22",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含 OFFLINE 实例数组"
+  },
+  {
+    "case_id": "AUTH-049",
+    "ac_id": "req-23",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含 instance_id/hostname/ip/status/last_heartbeat_time/license_id 完整字段"
+  },
+  {
+    "case_id": "AUTH-050",
+    "ac_id": "req-24",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含审计日志数组；13 种事件均可被记录与查询"
+  },
+  {
+    "case_id": "AUTH-051",
+    "ac_id": "req-25",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含心跳间隔/超时倍数/归档天数/历史删除天数/归档Cron/过期Cron/令牌TTL/弹性配额倍数 8 项配置"
+  },
+  {
+    "case_id": "AUTH-052",
+    "ac_id": "req-26",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "修改返回 SUCCESS；heartbeat-config 返回新值；审计日志含 CONFIG_UPDATE"
+  },
+  {
+    "case_id": "AUTH-053",
+    "ac_id": "req-26",
+    "risk_level": "medium",
+    "automation_level": "manual",
+    "execution_type": "manual",
+    "expected_result": "重载返回 SUCCESS；配置接口返回 DB 最新值；审计日志含 CONFIG_RELOAD"
+  },
+  {
+    "case_id": "AUTH-054",
+    "ac_id": "req-27",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS；used_instances 递增至 max+1；审计 SUCCESS"
+  },
+  {
+    "case_id": "AUTH-055",
+    "ac_id": "req-27",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 code=WARNING；used_instances 递增至 max×2+1；审计 WARNING"
+  },
+  {
+    "case_id": "AUTH-056",
+    "ac_id": "req-27",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 {code:INSTANCE_004}；used_instances 不变；不入库"
+  },
+  {
+    "case_id": "AUTH-057",
+    "ac_id": "req-28",
+    "risk_level": "high",
+    "automation_level": "manual",
+    "execution_type": "manual",
+    "expected_result": "并发注册后 used_instances 不超过 max×2；无超卖；配额释放后不为负数；双进程并发回归通过"
+  },
+  {
+    "case_id": "AUTH-058",
+    "ac_id": "req-34",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含授权总数/在线实例/离线实例/配额使用率，与数据库单次遍历聚合一致"
+  },
+  {
+    "case_id": "AUTH-059",
+    "ac_id": "req-35",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含按时间粒度聚合的趋势数组，粒度选择正确"
+  },
+  {
+    "case_id": "AUTH-060",
+    "ac_id": "req-36",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含在线实例数/启用授权数/配额使用率/告警数，分组正确"
+  },
+  {
+    "case_id": "AUTH-061",
+    "ac_id": "req-36",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 含告警列表，配额使用率≥90% 或 ≥95% 的授权产生对应级别告警"
+  },
+  {
+    "case_id": "AUTH-062",
+    "ac_id": "req-29",
+    "risk_level": "medium",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "响应 SUCCESS，data 为 CSV 文本，含表头与数据行，可被解析"
+  },
+  {
+    "case_id": "AUTH-063",
+    "ac_id": "req-30",
+    "risk_level": "high",
+    "automation_level": "unit",
+    "execution_type": "auto",
+    "expected_result": "有效文件验签通过；任一字段被修改或使用错误公钥时验签失败"
+  },
+  {
+    "case_id": "AUTH-064",
+    "ac_id": "req-31",
+    "risk_level": "high",
+    "automation_level": "unit",
+    "execution_type": "auto",
+    "expected_result": "注册返回 instanceId；心跳按配置间隔发送；收到 INSTANCE_002 后自动重注册；center-required=true 时注册失败则退出"
+  },
+  {
+    "case_id": "AUTH-065",
+    "ac_id": "req-32",
+    "risk_level": "high",
+    "automation_level": "ui_e2e",
+    "execution_type": "auto",
+    "expected_result": "正确凭据登录后显示仪表盘页；错误凭据显示用户名或密码错误且不进入控制台"
+  },
+  {
+    "case_id": "AUTH-066",
+    "ac_id": "req-32",
+    "risk_level": "medium",
+    "automation_level": "ui_e2e",
+    "execution_type": "auto",
+    "expected_result": "仪表盘渲染四个统计卡与趋势图/告警列表，数值与后端统计数据一致"
+  },
+  {
+    "case_id": "AUTH-067",
+    "ac_id": "req-32",
+    "risk_level": "high",
+    "automation_level": "ui_e2e",
+    "execution_type": "auto",
+    "expected_result": "列表过滤正确；详情弹窗显示完整字段；导入成功提示三层校验通过；禁用/删除经确认后生效并提示"
+  },
+  {
+    "case_id": "AUTH-068",
+    "ac_id": "req-32",
+    "risk_level": "high",
+    "automation_level": "ui_e2e",
+    "execution_type": "auto",
+    "expected_result": "在线/离线/历史标签切换正确；搜索过滤正确；详情弹窗字段完整；归档/删除经确认后生效并提示"
+  },
+  {
+    "case_id": "AUTH-069",
+    "ac_id": "req-32",
+    "risk_level": "medium",
+    "automation_level": "ui_e2e",
+    "execution_type": "auto",
+    "expected_result": "审计日志列表渲染时间/操作者/事件/目标/结果/详情；搜索与过滤正确"
+  },
+  {
+    "case_id": "AUTH-070",
+    "ac_id": "req-32",
+    "risk_level": "medium",
+    "automation_level": "ui_e2e",
+    "execution_type": "auto",
+    "expected_result": "统计卡与趋势图按所选范围渲染；点击导出下载 ias-stats-report-<range>.csv 文件"
+  },
+  {
+    "case_id": "AUTH-071",
+    "ac_id": "req-32",
+    "risk_level": "medium",
+    "automation_level": "ui_e2e",
+    "execution_type": "auto",
+    "expected_result": "提交后显示已提交 local/site 授权申请·待签发；申请记录区显示提交内容"
+  },
+  {
+    "case_id": "AUTH-072",
+    "ac_id": "req-32",
+    "risk_level": "medium",
+    "automation_level": "ui_e2e",
+    "execution_type": "auto",
+    "expected_result": "配置项正确显示；编辑保存后提示系统配置已保存并记录审计 CONFIG_UPDATE；密钥管理弹窗显示密钥对与公钥指纹"
+  },
+  {
+    "case_id": "AUTH-073",
+    "ac_id": "req-32",
+    "risk_level": "high",
+    "automation_level": "ui_e2e",
+    "execution_type": "auto",
+    "expected_result": "错误场景显示对应错误提示；正确场景提示管理员密码已修改并记录审计 PASSWORD_CHANGE"
+  },
+  {
+    "case_id": "AUTH-074",
+    "ac_id": "req-33",
+    "risk_level": "high",
+    "automation_level": "api_integration",
+    "execution_type": "auto",
+    "expected_result": "授权签发后导入成功；实例注册占用配额；心跳保活更新；超时下线释放配额；归档迁移历史；重注册不重复占用配额；全链路审计完整；配额守恒"
+  }
+]

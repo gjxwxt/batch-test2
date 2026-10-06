@@ -1,8 +1,10 @@
 package com.example.app.config;
 
+import com.example.app.auth.JwtAuthInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
@@ -11,6 +13,19 @@ import java.io.IOException;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
+    private final JwtAuthInterceptor jwtAuthInterceptor;
+
+    public WebConfig(JwtAuthInterceptor jwtAuthInterceptor) {
+        this.jwtAuthInterceptor = jwtAuthInterceptor;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(jwtAuthInterceptor)
+                .addPathPatterns("/api/v1/admin/**")
+                .excludePathPatterns("/api/v1/admin/login");
+    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {

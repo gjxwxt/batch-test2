@@ -64,46 +64,61 @@
 
 ---
 
-## 4. 管理员认证接口 (Admin Auth)
+## 3.5 授权管理 (License Admin) — wp-3
 
-> 鉴权语义：`/api/v1/admin/**` 除 `login` 外均需携带 `Authorization: Bearer <JWT>`。
-> JWT 过期 → `AUTH_002`（HTTP 401）。
+授权管理端点，路径前缀 `/api/v1/admin/licenses`（JWT 鉴权）。
 
-### 4.1 管理员登录 (IAS_AUTH_LOGIN)
-- **路径**：`POST /api/v1/admin/login`（无鉴权）
+### 3.5.1 导入授权
+- **路径**：`POST /api/v1/admin/licenses/import`
 - **请求体**：
 ```json
 {
-  "username": "admin",
-  "password": "Admin@123456"
+  "licenseFile": "<?xml version=\"1.0\"...><license>...</license>",
+  "licenseName": "My License"
 }
 ```
+- **字段约束**：`licenseFile` 不能为空（`@NotBlank`）。
+- **响应 (201 Created)**：导入后的授权对象。
+- **错误**：`LICENSE_002`（签名验证失败，400）、`LICENSE_004`（已过期，400）、`LICENSE_005`（重复导入，400）。
+
+### 3.5.2 授权列表
+- **路径**：`GET /api/v1/admin/licenses`
+- **响应 (200 OK)**：授权概要数组（不含完整授权文件）。
+
+### 3.5.3 授权详情
+- **路径**：`GET /api/v1/admin/licenses/{id}`
+- **响应 (200 OK)**：授权对象。
+- **错误**：`LICENSE_001`（授权不存在，404）。
+
+### 3.5.4 三层防篡改校验
+- **路径**：`GET /api/v1/admin/licenses/{id}/verify`
 - **响应 (200 OK)**：
 ```json
 {
-  "token": "<JWT>",
-  "username": "admin",
-  "tokenType": "Bearer"
+  "serial": "serial-001",
+  "verified": true,
+  "layers": [
+    { "name": "SIGNATURE", "passed": true, "detail": "..." },
+    { "name": "DB_STATE", "passed": true, "detail": "..." },
+    { "name": "FILE_INTEGRITY", "passed": true, "detail": "..." }
+  ],
+  "message": "授权校验通过"
 }
 ```
-- **响应 (401 Unauthorized)**：用户名或密码错误 → `AUTH_001`。
+- 三层：数字签名（RSA-2048 + SHA256withRSA）、数据库状态、存储文件一致性。
 
-### 4.2 修改密码 (IAS_AUTH_CHANGE_PWD)
-- **路径**：`PUT /api/v1/admin/password`（JWT 鉴权）
-- **请求体**：
-```json
-{
-  "oldPassword": "Admin@123456",
-  "newPassword": "NewPass@2026"
-}
-```
-- **响应 (200 OK)**：修改成功。
-- **响应 (400 Bad Request)**：旧密码错误 → `USER_003`；新密码复杂度不足 → `USER_004`。
-- **响应 (401 Unauthorized)**：令牌缺失/无效/过期 → `AUTH_002`。
+### 3.5.5 删除授权
+- **路径**：`DELETE /api/v1/admin/licenses/{id}`
+- **响应 (204 No Content)**：删除成功。
+- **错误**：`LICENSE_006`（存在在线实例，409）。
+
+### 3.5.6 禁用授权
+- **路径**：`PUT /api/v1/admin/licenses/{id}/disable`
+- **响应 (200 OK)**：禁用后的授权对象（`status=DISABLED`）。
 
 ---
 
-## 5. 统一错误响应格式 (Uniform Error Response)
+## 4. 统一错误响应格式 (Uniform Error Response)
 
 当请求失败（4xx 或 5xx）时，服务端严格返回统一格式的 JSON：
 

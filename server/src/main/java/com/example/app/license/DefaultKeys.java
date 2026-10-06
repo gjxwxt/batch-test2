@@ -3,8 +3,7 @@ package com.example.app.license;
 /**
  * 内置默认验签公钥（签发密钥对公钥）。
  *
- * <p>对应服务端自检授权文件 {@code test_license/auth-center-local-license.infor} 的签发私钥。
- * 生产环境应通过 JVM 系统属性 {@code -Dlicense.company.pub.key} 覆盖。
+ * <p>对应授权文件签发私钥。生产环境应通过 JVM 系统属性 {@code -Dlicense.company.pub.key} 覆盖。</p>
  */
 public final class DefaultKeys {
 

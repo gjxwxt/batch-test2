@@ -34,6 +34,12 @@ public class AuditLogRepository {
         return result;
     }
 
+public List<AuditLog> findAll() {
+        List<AuditLog> result = new ArrayList<>(storage.values());
+        result.sort(Comparator.comparing(AuditLog::operateTime).reversed());
+        return result;
+    }
+
     public void clear() {
         storage.clear();
     }

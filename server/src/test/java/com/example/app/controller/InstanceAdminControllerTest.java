@@ -1,11 +1,13 @@
 package com.example.app.controller;
 
+import com.example.app.auth.JwtTokenService;
 import com.example.app.exception.ErrorCode;
 import com.example.app.exception.GlobalExceptionHandler;
 import com.example.app.exception.LicenseException;
 import com.example.app.model.HistoryInstance;
 import com.example.app.model.Instance;
 import com.example.app.service.InstanceAdminService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,14 @@ class InstanceAdminControllerTest {
     @MockBean
     private InstanceAdminService instanceAdminService;
 
+    @MockBean
+    private JwtTokenService jwtTokenService;
+
+    @BeforeEach
+    void setUpAuth() {
+        when(jwtTokenService.validateToken("valid-token")).thenReturn("admin");
+    }
+
     private Instance sampleInstance(Long id, String instanceId, String status) {
         Instant now = Instant.now();
         return new Instance(
@@ -55,7 +65,7 @@ class InstanceAdminControllerTest {
         when(instanceAdminService.listOnlineInstances())
                 .thenReturn(List.of(sampleInstance(1L, "inst-1", Instance.STATUS_ONLINE)));
 
-        mockMvc.perform(get("/api/v1/admin/instances").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/admin/instances").header("Authorization", "Bearer valid-token").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].instanceId").value("inst-1"))
                 .andExpect(jsonPath("$[0].status").value("ONLINE"));
@@ -67,7 +77,7 @@ class InstanceAdminControllerTest {
         when(instanceAdminService.listOfflineInstances())
                 .thenReturn(List.of(sampleInstance(2L, "inst-2", Instance.STATUS_OFFLINE)));
 
-        mockMvc.perform(get("/api/v1/admin/instances/offline").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/admin/instances/offline").header("Authorization", "Bearer valid-token").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].instanceId").value("inst-2"))
                 .andExpect(jsonPath("$[0].status").value("OFFLINE"));
@@ -83,7 +93,7 @@ class InstanceAdminControllerTest {
                 HistoryInstance.STATUS_OFFLINE, now, now, now, now, now, now);
         when(instanceAdminService.listHistoryInstances()).thenReturn(List.of(history));
 
-        mockMvc.perform(get("/api/v1/admin/instances/history").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/admin/instances/history").header("Authorization", "Bearer valid-token").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].instanceId").value("hist-1"));
     }
@@ -94,7 +104,7 @@ class InstanceAdminControllerTest {
         when(instanceAdminService.getInstance(1L))
                 .thenReturn(sampleInstance(1L, "inst-1", Instance.STATUS_ONLINE));
 
-        mockMvc.perform(get("/api/v1/admin/instances/1").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/admin/instances/1").header("Authorization", "Bearer valid-token").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.instanceId").value("inst-1"));
     }
@@ -105,7 +115,7 @@ class InstanceAdminControllerTest {
         when(instanceAdminService.getInstance(999L))
                 .thenThrow(new LicenseException(ErrorCode.INSTANCE_002, "实例不存在：999"));
 
-        mockMvc.perform(get("/api/v1/admin/instances/999").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/admin/instances/999").header("Authorization", "Bearer valid-token").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("INSTANCE_002"));
     }

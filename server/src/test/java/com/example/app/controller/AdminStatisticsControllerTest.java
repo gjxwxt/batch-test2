@@ -1,11 +1,13 @@
 package com.example.app.controller;
 
+import com.example.app.auth.JwtTokenService;
 import com.example.app.exception.GlobalExceptionHandler;
 import com.example.app.model.StatisticsAlert;
 import com.example.app.model.StatisticsDashboard;
 import com.example.app.model.StatisticsOverview;
 import com.example.app.model.StatisticsTrend;
 import com.example.app.service.StatisticsService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,14 @@ class AdminStatisticsControllerTest {
     @MockBean
     private StatisticsService statisticsService;
 
+    @MockBean
+    private JwtTokenService jwtTokenService;
+
+    @BeforeEach
+    void setUpAuth() {
+        when(jwtTokenService.validateToken("valid-token")).thenReturn("admin");
+    }
+
     private StatisticsOverview sampleOverview() {
         return new StatisticsOverview(3, 2, 1, 0, 5, 3, 2, 16, 32768, 8, 16384, 10);
     }
@@ -48,7 +58,7 @@ class AdminStatisticsControllerTest {
     void shouldReturnOverview() throws Exception {
         when(statisticsService.overview()).thenReturn(sampleOverview());
 
-        mockMvc.perform(get("/api/v1/admin/statistics").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/admin/statistics").header("Authorization", "Bearer valid-token").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.licenseCount").value(3))
                 .andExpect(jsonPath("$.activeLicenseCount").value(2))
@@ -65,7 +75,7 @@ class AdminStatisticsControllerTest {
         ));
         when(statisticsService.trend(7)).thenReturn(trend);
 
-        mockMvc.perform(get("/api/v1/admin/statistics/trend").param("days", "7")
+        mockMvc.perform(get("/api/v1/admin/statistics/trend").header("Authorization", "Bearer valid-token").param("days", "7")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.days[0].date").value("2026-10-04"))
@@ -85,7 +95,7 @@ class AdminStatisticsControllerTest {
         );
         when(statisticsService.dashboardV2()).thenReturn(dashboard);
 
-        mockMvc.perform(get("/api/v1/admin/statistics/dashboard-v2").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/admin/statistics/dashboard-v2").header("Authorization", "Bearer valid-token").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.overview.licenseCount").value(3))
                 .andExpect(jsonPath("$.cpuUtilization").value(50.0))
@@ -99,7 +109,7 @@ class AdminStatisticsControllerTest {
                 new StatisticsAlert("WARN", "LICENSE_EXPIRING", "授权即将过期", "S1")
         ));
 
-        mockMvc.perform(get("/api/v1/admin/statistics/alerts").accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/api/v1/admin/statistics/alerts").header("Authorization", "Bearer valid-token").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].type").value("LICENSE_EXPIRING"))
                 .andExpect(jsonPath("$[0].level").value("WARN"));
@@ -110,7 +120,7 @@ class AdminStatisticsControllerTest {
     void shouldExportCsv() throws Exception {
         when(statisticsService.export()).thenReturn("metric,value\nlicenseCount,3\n");
 
-        mockMvc.perform(get("/api/v1/admin/statistics/export"))
+        mockMvc.perform(get("/api/v1/admin/statistics/export").header("Authorization", "Bearer valid-token"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
                 .andExpect(content().string("metric,value\nlicenseCount,3\n"));

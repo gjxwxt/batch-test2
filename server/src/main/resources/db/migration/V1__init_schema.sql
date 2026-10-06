@@ -12,10 +12,10 @@ CREATE TABLE admin_user (
     username         VARCHAR(64)  NOT NULL,
     password_hash    VARCHAR(128) NOT NULL,
     status           SMALLINT     NOT NULL DEFAULT 1,
-    last_login_time  TIMESTAMPTZ,
+    last_login_time  TIMESTAMP,
     last_login_ip    VARCHAR(64),
-    create_time      TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    update_time      TIMESTAMPTZ  NOT NULL DEFAULT now()
+    create_time      TIMESTAMP  NOT NULL DEFAULT now(),
+    update_time      TIMESTAMP  NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE  admin_user IS '管理员账号';
@@ -38,7 +38,7 @@ CREATE TABLE license (
     licensee            VARCHAR(128),
     license_mode        VARCHAR(32),
     formal              BOOLEAN      NOT NULL DEFAULT FALSE,
-    expiration          TIMESTAMPTZ,
+    expiration          TIMESTAMP,
     userinfor           VARCHAR(512),
     max_instances       INTEGER      NOT NULL DEFAULT 0,
     max_cpus            INTEGER      NOT NULL DEFAULT 0,
@@ -50,8 +50,8 @@ CREATE TABLE license (
     bxb_file            TEXT,
     status              SMALLINT     NOT NULL DEFAULT 1,
     source              VARCHAR(32),
-    create_time         TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    update_time         TIMESTAMPTZ  NOT NULL DEFAULT now()
+    create_time         TIMESTAMP  NOT NULL DEFAULT now(),
+    update_time         TIMESTAMP  NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE  license IS '授权';
@@ -80,11 +80,11 @@ CREATE TABLE instance (
     current_memory        BIGINT       NOT NULL DEFAULT 0,
     extended_attributes   JSONB,
     status                SMALLINT     NOT NULL DEFAULT 1,
-    online_time           TIMESTAMPTZ,
-    last_heartbeat_time   TIMESTAMPTZ,
-    offline_time          TIMESTAMPTZ,
-    create_time           TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    update_time           TIMESTAMPTZ  NOT NULL DEFAULT now()
+    online_time           TIMESTAMP,
+    last_heartbeat_time   TIMESTAMP,
+    offline_time          TIMESTAMP,
+    create_time           TIMESTAMP  NOT NULL DEFAULT now(),
+    update_time           TIMESTAMP  NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE  instance IS '在线实例';
@@ -113,12 +113,12 @@ CREATE TABLE history_instance (
     current_memory        BIGINT       NOT NULL DEFAULT 0,
     extended_attributes   JSONB,
     status                SMALLINT     NOT NULL DEFAULT 0,
-    online_time           TIMESTAMPTZ,
-    last_heartbeat_time   TIMESTAMPTZ,
-    offline_time          TIMESTAMPTZ,
-    archived_time         TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    create_time           TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    update_time           TIMESTAMPTZ  NOT NULL DEFAULT now()
+    online_time           TIMESTAMP,
+    last_heartbeat_time   TIMESTAMP,
+    offline_time          TIMESTAMP,
+    archived_time         TIMESTAMP  NOT NULL DEFAULT now(),
+    create_time           TIMESTAMP  NOT NULL DEFAULT now(),
+    update_time           TIMESTAMP  NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE  history_instance IS '历史实例（归档）';
@@ -139,7 +139,7 @@ CREATE TABLE audit_log (
     target_id       VARCHAR(128),
     result          SMALLINT     NOT NULL DEFAULT 1,
     detail          TEXT,
-    operate_time    TIMESTAMPTZ  NOT NULL DEFAULT now()
+    operate_time    TIMESTAMP  NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE  audit_log IS '审计日志';
@@ -155,7 +155,7 @@ CREATE TABLE system_config (
     config_key    VARCHAR(128) NOT NULL,
     config_value  VARCHAR(512),
     config_desc   VARCHAR(512),
-    update_time   TIMESTAMPTZ  NOT NULL DEFAULT now()
+    update_time   TIMESTAMP  NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE system_config IS '系统配置';

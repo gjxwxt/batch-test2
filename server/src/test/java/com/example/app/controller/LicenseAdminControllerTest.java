@@ -1,5 +1,6 @@
 package com.example.app.controller;
 
+import com.example.app.auth.JwtTokenService;
 import com.example.app.exception.ErrorCode;
 import com.example.app.exception.GlobalExceptionHandler;
 import com.example.app.exception.LicenseException;
@@ -9,6 +10,7 @@ import com.example.app.model.LicenseSummary;
 import com.example.app.model.LicenseVerifyResponse;
 import com.example.app.service.LicenseAdminService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +46,14 @@ class LicenseAdminControllerTest {
     @MockBean
     private LicenseAdminService licenseAdminService;
 
+    @MockBean
+    private JwtTokenService jwtTokenService;
+
+    @BeforeEach
+    void setUpAuth() {
+        when(jwtTokenService.validateToken("valid-token")).thenReturn("admin");
+    }
+
     private License sampleLicense() {
         return new License(
                 1L, "serial-001", "My License", "AS", "Server", "1.0", "Test Corp",
@@ -61,6 +71,7 @@ class LicenseAdminControllerTest {
         LicenseImportRequest request = new LicenseImportRequest("<license/>", "My License");
 
         mockMvc.perform(post("/api/v1/admin/licenses/import")
+                        .header("Authorization", "Bearer valid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -74,6 +85,7 @@ class LicenseAdminControllerTest {
         LicenseImportRequest request = new LicenseImportRequest("   ", null);
 
         mockMvc.perform(post("/api/v1/admin/licenses/import")
+                        .header("Authorization", "Bearer valid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -89,6 +101,7 @@ class LicenseAdminControllerTest {
         when(licenseAdminService.listLicenses()).thenReturn(List.of(summary));
 
         mockMvc.perform(get("/api/v1/admin/licenses")
+                        .header("Authorization", "Bearer valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].serial").value("serial-001"))
@@ -101,6 +114,7 @@ class LicenseAdminControllerTest {
         when(licenseAdminService.getLicense(1L)).thenReturn(sampleLicense());
 
         mockMvc.perform(get("/api/v1/admin/licenses/1")
+                        .header("Authorization", "Bearer valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.serial").value("serial-001"));
@@ -113,6 +127,7 @@ class LicenseAdminControllerTest {
                 .thenThrow(new LicenseException(ErrorCode.LICENSE_001, "授权不存在：999"));
 
         mockMvc.perform(get("/api/v1/admin/licenses/999")
+                        .header("Authorization", "Bearer valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("LICENSE_001"));
@@ -128,6 +143,7 @@ class LicenseAdminControllerTest {
         when(licenseAdminService.verifyLicense(1L)).thenReturn(response);
 
         mockMvc.perform(get("/api/v1/admin/licenses/1/verify")
+                        .header("Authorization", "Bearer valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.verified").value(true))
@@ -139,7 +155,8 @@ class LicenseAdminControllerTest {
     void shouldDeleteLicense() throws Exception {
         doNothing().when(licenseAdminService).deleteLicense(1L);
 
-        mockMvc.perform(delete("/api/v1/admin/licenses/1"))
+        mockMvc.perform(delete("/api/v1/admin/licenses/1")
+                        .header("Authorization", "Bearer valid-token"))
                 .andExpect(status().isNoContent());
 
         verify(licenseAdminService, times(1)).deleteLicense(1L);
@@ -151,7 +168,8 @@ class LicenseAdminControllerTest {
         doThrow(new LicenseException(ErrorCode.LICENSE_006, "存在在线实例，无法删除"))
                 .when(licenseAdminService).deleteLicense(1L);
 
-        mockMvc.perform(delete("/api/v1/admin/licenses/1"))
+        mockMvc.perform(delete("/api/v1/admin/licenses/1")
+                        .header("Authorization", "Bearer valid-token"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("LICENSE_006"));
     }
@@ -167,6 +185,7 @@ class LicenseAdminControllerTest {
         when(licenseAdminService.disableLicense(1L)).thenReturn(disabled);
 
         mockMvc.perform(put("/api/v1/admin/licenses/1/disable")
+                        .header("Authorization", "Bearer valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DISABLED"));

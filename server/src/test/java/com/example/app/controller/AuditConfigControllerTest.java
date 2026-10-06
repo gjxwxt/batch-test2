@@ -1,5 +1,6 @@
 package com.example.app.controller;
 
+import com.example.app.auth.JwtTokenService;
 import com.example.app.exception.GlobalExceptionHandler;
 import com.example.app.model.AuditLog;
 import com.example.app.model.AuditLogQuery;
@@ -9,6 +10,7 @@ import com.example.app.model.SystemConfig;
 import com.example.app.service.AuditService;
 import com.example.app.service.SystemConfigService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +44,14 @@ class AuditConfigControllerTest {
     @MockBean
     private SystemConfigService systemConfigService;
 
+    @MockBean
+    private JwtTokenService jwtTokenService;
+
+    @BeforeEach
+    void setUpAuth() {
+        when(jwtTokenService.validateToken("valid-token")).thenReturn("admin");
+    }
+
     @Test
     @DisplayName("GET /api/v1/admin/audit-logs returns audit logs with 200 OK")
     void shouldReturnAuditLogs() throws Exception {
@@ -50,6 +60,7 @@ class AuditConfigControllerTest {
         when(auditService.query(any(AuditLogQuery.class))).thenReturn(List.of(log));
 
         mockMvc.perform(get("/api/v1/admin/audit-logs")
+                        .header("Authorization", "Bearer valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].logId").value("log-1"))
@@ -65,6 +76,7 @@ class AuditConfigControllerTest {
         when(auditService.query(any(AuditLogQuery.class))).thenReturn(List.of());
 
         mockMvc.perform(get("/api/v1/admin/audit-logs")
+                        .header("Authorization", "Bearer valid-token")
                         .param("operationType", "LOGIN")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -80,6 +92,7 @@ class AuditConfigControllerTest {
         when(systemConfigService.getAllConfigs()).thenReturn(List.of(config));
 
         mockMvc.perform(get("/api/v1/admin/config")
+                        .header("Authorization", "Bearer valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].configKey").value("heartbeat.interval"))
@@ -98,6 +111,7 @@ class AuditConfigControllerTest {
                 .thenReturn(List.of(interval, timeout));
 
         mockMvc.perform(put("/api/v1/admin/config/heartbeat")
+                        .header("Authorization", "Bearer valid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -113,6 +127,7 @@ class AuditConfigControllerTest {
         HeartbeatConfigRequest request = new HeartbeatConfigRequest(0, 5);
 
         mockMvc.perform(put("/api/v1/admin/config/heartbeat")
+                        .header("Authorization", "Bearer valid-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -128,6 +143,7 @@ class AuditConfigControllerTest {
         when(systemConfigService.reloadConfig()).thenReturn(List.of(config));
 
         mockMvc.perform(post("/api/v1/admin/config/reload")
+                        .header("Authorization", "Bearer valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].configKey").value("heartbeat.interval"));

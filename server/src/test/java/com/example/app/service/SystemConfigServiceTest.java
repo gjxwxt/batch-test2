@@ -52,9 +52,9 @@ class SystemConfigServiceTest {
     @DisplayName("updateHeartbeatConfig updates heartbeat interval and timeout multiplier")
     void shouldUpdateHeartbeatConfig() {
         SystemConfig interval = new SystemConfig(1L, "heartbeat.interval", "30", "心跳间隔（秒）", Instant.now());
-        SystemConfig timeout = new SystemConfig(2L, "heartbeat.timeout_multiplier", "3", "心跳超时倍数", Instant.now());
+        SystemConfig timeout = new SystemConfig(2L, "heartbeat.timeout.count", "3", "心跳超时倍数", Instant.now());
         when(systemConfigRepository.findByKey("heartbeat.interval")).thenReturn(Optional.of(interval));
-        when(systemConfigRepository.findByKey("heartbeat.timeout_multiplier")).thenReturn(Optional.of(timeout));
+        when(systemConfigRepository.findByKey("heartbeat.timeout.count")).thenReturn(Optional.of(timeout));
         when(systemConfigRepository.save(any(SystemConfig.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 

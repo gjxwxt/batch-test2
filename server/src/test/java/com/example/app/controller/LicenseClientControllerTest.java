@@ -1,5 +1,6 @@
 package com.example.app.controller;
 
+import com.example.app.auth.JwtTokenService;
 import com.example.app.exception.ErrorCode;
 import com.example.app.exception.GlobalExceptionHandler;
 import com.example.app.exception.LicenseException;
@@ -44,6 +45,9 @@ class LicenseClientControllerTest {
 
     @MockBean
     private LicenseClientService licenseClientService;
+
+    @MockBean
+    private JwtTokenService jwtTokenService;
 
     @Test
     @DisplayName("GET /api/v1/license/public-key 返回通信公钥")

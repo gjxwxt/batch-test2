@@ -47,15 +47,6 @@ public class GlobalExceptionHandler {
                 .body(ApiErrorResponse.of(ErrorCode.LICENSE_002.getCode(), ex.getMessage()));
     }
 
-    private HttpStatus httpStatusForErrorCode(ErrorCode code) {
-        return switch (code) {
-            case AUTH_001, AUTH_002 -> HttpStatus.UNAUTHORIZED;
-            case USER_001 -> HttpStatus.NOT_FOUND;
-            case USER_003, USER_004, PARAM_001 -> HttpStatus.BAD_REQUEST;
-            default -> HttpStatus.BAD_REQUEST;
-        };
-    }
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
         List<String> details = new ArrayList<>();
@@ -89,6 +80,7 @@ public class GlobalExceptionHandler {
      */
     private HttpStatus httpStatusForErrorCode(ErrorCode code) {
         return switch (code) {
+            case AUTH_001, AUTH_002 -> HttpStatus.UNAUTHORIZED;
             case LICENSE_001, USER_001, INSTANCE_002 -> HttpStatus.NOT_FOUND;
             case LICENSE_006 -> HttpStatus.CONFLICT;
             case LICENSE_002, LICENSE_003, LICENSE_004, LICENSE_005,

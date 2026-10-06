@@ -1,38 +1,52 @@
 package com.example.app.controller;
 
+import com.example.app.model.ChangePasswordRequest;
+import com.example.app.model.LoginRequest;
+import com.example.app.model.LoginResponse;
+import com.example.app.service.AdminAuthService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Map;
+import org.springframework.web.bind.annotation.*;
 
 /**
- * 管理端认证控制器骨架（共享契约 infra:api-skeleton）。
+ * 管理员认证控制器（IAS_AUTH_LOGIN / IAS_AUTH_CHANGE_PWD）。
  *
- * <p>仅定义 API 路径与请求/响应形状，业务逻辑由下游工作包实现。</p>
+ * <ul>
+ *   <li>POST /api/v1/admin/login — 登录，无鉴权，返回 JWT 令牌</li>
+ *   <li>PUT /api/v1/admin/password — 修改密码，JWT 鉴权</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/api/v1/admin")
 public class AdminAuthController {
 
-    /**
-     * 管理员登录（无鉴权）。
-     * POST /api/v1/admin/login —— IAS_AUTH_LOGIN
-     */
-    @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, Object> request) {
-        return ResponseEntity.ok(Map.of("token", "placeholder"));
+    private final AdminAuthService adminAuthService;
+
+    public AdminAuthController(AdminAuthService adminAuthService) {
+        this.adminAuthService = adminAuthService;
     }
 
-    /**
-     * 修改管理员密码（JWT）。
-     * PUT /api/v1/admin/password —— IAS_AUTH_CHANGE_PWD
-     */
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request,
+                                               HttpServletRequest httpRequest) {
+        String clientIp = resolveClientIp(httpRequest);
+        LoginResponse response = adminAuthService.login(request, clientIp);
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/password")
-    public ResponseEntity<Map<String, Object>> changePassword(@RequestBody Map<String, Object> request) {
-        return ResponseEntity.ok(Map.of("result", "ok"));
+    public ResponseEntity<Void> changePassword(@RequestAttribute("authenticatedUsername") String username,
+                                               @Valid @RequestBody ChangePasswordRequest request) {
+        adminAuthService.changePassword(username, request);
+        return ResponseEntity.ok().build();
+    }
+
+    private String resolveClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

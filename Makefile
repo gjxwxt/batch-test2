@@ -1,4 +1,4 @@
-.PHONY: all dev dev-backend dev-frontend install test test-backend test-frontend lint verify build build-frontend build-backend clean doctor
+.PHONY: all dev dev-backend dev-frontend install test test-backend test-sdk test-frontend lint verify build build-frontend build-backend clean doctor
 
 all: build
 
@@ -18,10 +18,13 @@ install:
 	cd web && npm ci
 	cd server && ./gradlew --no-daemon dependencies
 
-test: test-backend test-frontend
+test: test-backend test-sdk test-frontend
 
 test-backend:
 	cd server && ./gradlew --no-daemon test
+
+test-sdk:
+	cd sdk && ./gradlew --no-daemon test
 
 test-frontend:
 	cd web && npm test -- --run
@@ -33,7 +36,10 @@ lint:
 verify: doctor lint test build-frontend
 	@echo "verify: ok"
 
-build: build-frontend build-backend
+build: build-frontend build-backend build-sdk
+
+build-sdk:
+	cd sdk && ./gradlew --no-daemon jar -x test
 
 build-frontend:
 	@if [ ! -d web/node_modules ]; then $(MAKE) install; fi
@@ -52,6 +58,9 @@ doctor:
 	@test -f server/build.gradle || (echo "doctor: server/build.gradle is missing" && exit 1)
 	@test -f server/gradle/wrapper/gradle-wrapper.jar || (echo "doctor: server/gradle/wrapper/gradle-wrapper.jar is missing" && exit 1)
 	@test -x server/gradlew || (echo "doctor: server/gradlew is not executable" && exit 1)
+	@test -f sdk/build.gradle || (echo "doctor: sdk/build.gradle is missing" && exit 1)
+	@test -f sdk/gradle/wrapper/gradle-wrapper.jar || (echo "doctor: sdk/gradle/wrapper/gradle-wrapper.jar is missing" && exit 1)
+	@test -x sdk/gradlew || (echo "doctor: sdk/gradlew is not executable" && exit 1)
 	@test -f web/package.json || (echo "doctor: web/package.json is missing" && exit 1)
 	@test -f web/package-lock.json || (echo "doctor: web/package-lock.json is missing" && exit 1)
 	@test -f .gitlab-ci.yml || (echo "doctor: .gitlab-ci.yml is missing" && exit 1)
@@ -61,4 +70,5 @@ doctor:
 
 clean:
 	cd server && ./gradlew --no-daemon clean
+	cd sdk && ./gradlew --no-daemon clean
 	rm -rf web/dist web/node_modules server/src/main/resources/static/* build/libs

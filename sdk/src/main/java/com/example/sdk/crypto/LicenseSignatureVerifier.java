@@ -30,28 +30,30 @@ public final class LicenseSignatureVerifier {
     /**
      * Build the canonical signed payload for a license.
      *
-     * <p>Each canonical field is emitted as {@code <salt><fieldName>=<value>}
-     * joined by newlines, in the frozen order. Missing/blank fields are emitted
-     * with an empty value so the payload is deterministic.</p>
+     * <p>Format (frozen contract §4): {@code InforSuiteAuth2026_<field1>=<value1>&<field2>=<value2>&...}
+     * — fields joined by {@code &} as {@code key=value}, empty values omitted.
+     * This must match the issuing tool (tools) and the server verifier so that
+     * sign → import → verify works end-to-end.</p>
      *
      * @param fields raw license field map (raw contract field names)
      * @return the canonical payload string
      */
     public static String buildCanonicalPayload(Map<String, String> fields) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(SignatureFields.SALT_PREFIX);
+        boolean first = true;
         for (String field : SignatureFields.CANONICAL_ORDER) {
             // The canonical field "mode" maps to the raw license-file field
             // "license_mode" (see the shared license table contract).
             String rawKey = "mode".equals(field) ? "license_mode" : field;
             String value = fields.get(rawKey);
-            if (value == null) {
-                value = "";
+            if (value == null || value.isEmpty()) {
+                continue;
             }
-            sb.append(SignatureFields.SALT_PREFIX)
-                    .append(field)
-                    .append('=')
-                    .append(value)
-                    .append('\n');
+            if (!first) {
+                sb.append('&');
+            }
+            sb.append(field).append('=').append(value);
+            first = false;
         }
         return sb.toString();
     }

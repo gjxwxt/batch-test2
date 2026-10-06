@@ -81,7 +81,7 @@ class LicenseClientControllerTest {
     @DisplayName("POST /api/v1/license/register 注册成功返回 201")
     void shouldRegisterSuccessfully() throws Exception {
         when(licenseClientService.register(any(RegisterRequest.class)))
-                .thenReturn(new RegisterResponse("client-uuid-1", "ONLINE", 30, "注册成功"));
+                .thenReturn(new RegisterResponse("SUCCESS", "client-uuid-1", "ONLINE", 30, "注册成功"));
 
         RegisterRequest request = new RegisterRequest(
                 "serial-001", "client-uuid-1", "AS", null, null, null,
@@ -163,27 +163,25 @@ class LicenseClientControllerTest {
     @DisplayName("POST /api/v1/license/file-apply 授权文件申请成功返回 200")
     void shouldApplyFileSuccessfully() throws Exception {
         when(licenseClientService.fileApply(any(FileApplyRequest.class)))
-                .thenReturn(new FileApplyResponse("serial-001", "<license/>", "local", "授权文件申请成功"));
+                .thenReturn(new FileApplyResponse("FA-ABC12345", "local", "PENDING", "已提交 local 授权申请 · 待签发"));
 
         FileApplyRequest request = new FileApplyRequest(
-                "serial-001", "client-uuid-1", "AS", null, null,
-                "host-1", "192.168.1.10", "AA:BB:CC", "sig");
+                "local", "InforSuite AS", "企业版", "示例客户", 10, null, null);
 
         mockMvc.perform(post("/api/v1/license/file-apply")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.serial").value("serial-001"))
-                .andExpect(jsonPath("$.licenseMode").value("local"))
-                .andExpect(jsonPath("$.licenseFile").value("<license/>"));
+                .andExpect(jsonPath("$.applyId").value("FA-ABC12345"))
+                .andExpect(jsonPath("$.mode").value("local"))
+                .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
     @Test
-    @DisplayName("POST /api/v1/license/file-apply 空 serial 返回 400")
-    void shouldRejectBlankSerialOnFileApply() throws Exception {
+    @DisplayName("POST /api/v1/license/file-apply 空 mode 返回 400")
+    void shouldRejectBlankModeOnFileApply() throws Exception {
         FileApplyRequest request = new FileApplyRequest(
-                "   ", "client-uuid-1", "AS", null, null,
-                "host-1", "192.168.1.10", "AA:BB:CC", "sig");
+                "   ", "InforSuite AS", "企业版", "示例客户", 10, null, null);
 
         mockMvc.perform(post("/api/v1/license/file-apply")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -10,7 +10,7 @@ describe('API service unit tests', () => {
     localStorage.clear()
   })
 
-  it('fetches health status from /api/health', async () => {
+  it('fetches health status from /api/v1/health', async () => {
     const mockHealth = { status: 'UP', timestamp: '2026-09-09T12:00:00Z', service: 'server' }
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -21,7 +21,7 @@ describe('API service unit tests', () => {
     const result = await api.getHealth()
     expect(result.status).toBe('UP')
     expect(result.service).toBe('server')
-    expect(globalThis.fetch).toHaveBeenCalledWith('/api/health')
+    expect(globalThis.fetch).toHaveBeenCalledWith('/api/v1/health')
   })
 
   it('logs in via POST /api/v1/admin/login and returns token', async () => {

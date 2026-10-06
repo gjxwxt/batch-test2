@@ -65,20 +65,20 @@ class SdkClientTest {
     @Test
     void fetchPublicKeyParsesResponse() {
         stub("/api/v1/license/public-key", "GET",
-                "{\"algorithm\":\"RSA\",\"publicKeyBase64\":\"QUJD\",\"keySize\":2048}");
+                "{\"algorithm\":\"RSA\",\"keySize\":2048,\"publicKey\":\"QUJD\"}");
 
         SdkClient client = SdkClient.create(baseUrl, Duration.ofSeconds(5));
         PublicKeyResponse response = client.fetchPublicKey();
 
         assertEquals("RSA", response.algorithm());
-        assertEquals("QUJD", response.publicKeyBase64());
+        assertEquals("QUJD", response.publicKey());
         assertTrue(response.isRsa2048());
     }
 
     @Test
     void fetchHeartbeatConfigParsesResponse() {
         stub("/api/v1/license/heartbeat-config", "GET",
-                "{\"intervalSeconds\":45,\"timeoutMultiplier\":3,\"offlineThresholdSeconds\":135}");
+                "{\"heartbeatInterval\":45,\"timeoutCount\":3,\"timeoutSeconds\":135}");
 
         SdkClient client = SdkClient.create(baseUrl, Duration.ofSeconds(5));
         HeartbeatConfig config = client.fetchHeartbeatConfig();
@@ -89,10 +89,11 @@ class SdkClientTest {
     @Test
     void registerPostsJsonAndParsesResponse() {
         stub("/api/v1/license/register", "POST",
-                "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"instanceId\":\"inst-1\",\"licenseId\":\"lic-1\",\"clientUuid\":\"uuid-1\"}");
+                "{\"instanceId\":\"inst-1\",\"status\":\"ONLINE\",\"heartbeatInterval\":30,\"message\":\"注册成功\"}");
 
         SdkClient client = SdkClient.create(baseUrl, Duration.ofSeconds(5));
         RegisterRequest request = RegisterRequest.builder()
+                .serial("serial-001")
                 .clientUuid("uuid-1")
                 .proname("InforSuite")
                 .hostname("host-a")
@@ -108,19 +109,19 @@ class SdkClientTest {
     @Test
     void heartbeatPostsJsonAndParsesResponse() {
         stub("/api/v1/license/heartbeat", "POST",
-                "{\"code\":\"SUCCESS\",\"message\":\"ok\",\"accepted\":true,\"nextHeartbeatIntervalSeconds\":30}");
+                "{\"instanceId\":\"inst-1\",\"status\":\"ONLINE\",\"serverTime\":\"2026-10-05T00:00:00Z\",\"message\":\"心跳成功\"}");
 
         SdkClient client = SdkClient.create(baseUrl, Duration.ofSeconds(5));
         HeartbeatRequest request = HeartbeatRequest.builder()
                 .instanceId("inst-1")
-                .clientUuid("uuid-1")
+                .serial("serial-001")
                 .currentCpus(4)
                 .build();
 
         HeartbeatResponse response = client.heartbeat(request);
 
         assertTrue(response.isSuccess());
-        assertTrue(response.accepted());
+        assertEquals("inst-1", response.instanceId());
         assertTrue(lastBody.get().contains("\"instanceId\":\"inst-1\""));
     }
 

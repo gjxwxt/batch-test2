@@ -47,14 +47,14 @@ class ModelTest {
 
     @Test
     void registerResponseSuccessDetection() {
-        assertTrue(new RegisterResponse("SUCCESS", "ok", "i1", "l1", "u1").isSuccess());
-        assertFalse(new RegisterResponse("LICENSE_001", "denied", null, null, null).isSuccess());
+        assertTrue(new RegisterResponse("i1", "ONLINE", 30, "ok").isSuccess());
+        assertFalse(new RegisterResponse(null, "OFFLINE", null, "denied").isSuccess());
     }
 
     @Test
     void heartbeatResponseSuccessDetection() {
-        assertTrue(new HeartbeatResponse("SUCCESS", "ok", true, 30L).isSuccess());
-        assertFalse(new HeartbeatResponse("WARNING", "quota", false, 5L).isSuccess());
+        assertTrue(new HeartbeatResponse("i1", "ONLINE", "2026-10-05T00:00:00Z", "ok").isSuccess());
+        assertFalse(new HeartbeatResponse("i1", "OFFLINE", null, "quota").isSuccess());
     }
 
     @Test
@@ -66,8 +66,8 @@ class ModelTest {
 
     @Test
     void publicKeyResponseDetectsRsa2048() {
-        assertTrue(new PublicKeyResponse("RSA", "base64", 2048).isRsa2048());
-        assertFalse(new PublicKeyResponse("RSA", "base64", 1024).isRsa2048());
-        assertFalse(new PublicKeyResponse("EC", "base64", 2048).isRsa2048());
+        assertTrue(new PublicKeyResponse("RSA", 2048, "base64").isRsa2048());
+        assertFalse(new PublicKeyResponse("RSA", 1024, "base64").isRsa2048());
+        assertFalse(new PublicKeyResponse("EC", 2048, "base64").isRsa2048());
     }
 }

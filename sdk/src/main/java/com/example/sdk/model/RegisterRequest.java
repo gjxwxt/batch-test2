@@ -4,10 +4,11 @@ package com.example.sdk.model;
  * Payload sent to {@code POST /api/v1/license/register} to register a client
  * instance with the IAS Auth Center.
  *
- * <p>Fields mirror the shared {@code instance} table contract. The request is
+ * <p>Fields mirror the server's {@code RegisterRequest} DTO. The request is
  * signed with the client's communication key pair (dual-key contract, O6).</p>
  */
 public record RegisterRequest(
+        String serial,
         String clientUuid,
         String proname,
         String productType,
@@ -28,6 +29,7 @@ public record RegisterRequest(
     }
 
     public static final class Builder {
+        private String serial;
         private String clientUuid;
         private String proname;
         private String productType;
@@ -42,6 +44,7 @@ public record RegisterRequest(
         private String extendedAttributes;
         private String signature;
 
+        public Builder serial(String v) { this.serial = v; return this; }
         public Builder clientUuid(String v) { this.clientUuid = v; return this; }
         public Builder proname(String v) { this.proname = v; return this; }
         public Builder productType(String v) { this.productType = v; return this; }
@@ -57,9 +60,9 @@ public record RegisterRequest(
         public Builder signature(String v) { this.signature = v; return this; }
 
         public RegisterRequest build() {
-            return new RegisterRequest(clientUuid, proname, productType, productVersion,
-                    productSpec, hostname, ipAddress, mac, machineType, currentCpus,
-                    currentMemory, extendedAttributes, signature);
+            return new RegisterRequest(serial, clientUuid, proname, productType,
+                    productVersion, productSpec, hostname, ipAddress, mac, machineType,
+                    currentCpus, currentMemory, extendedAttributes, signature);
         }
     }
 }

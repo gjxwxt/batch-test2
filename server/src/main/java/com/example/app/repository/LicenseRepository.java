@@ -100,7 +100,8 @@ public class LicenseRepository {
             int used = license.usedInstances() != null ? license.usedInstances() : 0;
             int remaining = license.remainingInstances() != null ? license.remainingInstances() : 0;
 
-            // 弹性配额上限：max_instances * multiplier；max_instances <= 0 表示不限制
+            // 弹性配额上限：max_instances * multiplier；max_instances <= 0 表示不限制。
+            // 判定基于占用前 used：used >= max*2 拒绝（AUTH-056），used < max*2 允许（AUTH-054/055）。
             long elasticLimit = (long) maxInstances * elasticMultiplier;
             if (maxInstances > 0 && used >= elasticLimit) {
                 acquired.set(false);
@@ -135,6 +136,48 @@ public class LicenseRepository {
             );
         });
         return acquired.get();
+    }
+
+    /**
+     * 原子占用 CPU/内存配额（AUTH-030/031）。
+     *
+     * <p>在实例配额占用成功后调用，将 used_cpus / used_memory 递增。基于
+     * {@link ConcurrentHashMap#computeIfPresent} 的 per-key 原子性保证并发安全。</p>
+     *
+     * @param licenseId 授权主键
+     * @param cpus      本次占用的 CPU 数（可空）
+     * @param memory    本次占用的内存 MB（可空）
+     */
+    public void acquireCpuMemoryQuota(Long licenseId, Integer cpus, Integer memory) {
+        storage.computeIfPresent(licenseId, (id, license) -> {
+            int usedCpus = license.usedCpus() != null ? license.usedCpus() : 0;
+            int usedMemory = license.usedMemory() != null ? license.usedMemory() : 0;
+            return new License(
+                    license.id(),
+                    license.serial(),
+                    license.licenseName(),
+                    license.proname(),
+                    license.component(),
+                    license.version(),
+                    license.licensee(),
+                    license.licenseMode(),
+                    license.formal(),
+                    license.expiration(),
+                    license.userinfor(),
+                    license.maxInstances(),
+                    license.maxCpus(),
+                    license.maxMemory(),
+                    license.usedInstances(),
+                    license.remainingInstances(),
+                    usedCpus + (cpus != null ? cpus : 0),
+                    usedMemory + (memory != null ? memory : 0),
+                    license.bxbFile(),
+                    license.status(),
+                    license.source(),
+                    license.createTime(),
+                    Instant.now()
+            );
+        });
     }
 
     public boolean deleteById(Long id) {

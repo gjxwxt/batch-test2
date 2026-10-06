@@ -7,11 +7,14 @@ package com.example.sdk.model;
  * signatures. Per the dual-key contract (O6) this is the <em>issuing</em>
  * public key (verifies license signatures), distinct from the communication
  * key pair used for register/heartbeat.</p>
+ *
+ * <p>Field names mirror the server's {@code PublicKeyResponse} DTO
+ * ({@code algorithm}/{@code keySize}/{@code publicKey}).</p>
  */
 public record PublicKeyResponse(
         String algorithm,
-        String publicKeyBase64,
-        Integer keySize) {
+        Integer keySize,
+        String publicKey) {
 
     public boolean isRsa2048() {
         return "RSA".equalsIgnoreCase(algorithm) && keySize != null && keySize == 2048;

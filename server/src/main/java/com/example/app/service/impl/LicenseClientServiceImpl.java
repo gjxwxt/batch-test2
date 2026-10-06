@@ -68,7 +68,12 @@ public class LicenseClientServiceImpl implements LicenseClientService {
         // 2. 查找授权（LICENSE_001）
         License license = findActiveLicense(request.serial());
 
-        // 3. 已存在实例则执行重注册（req-17）
+        // 3. proname 必填（AUTH-032 / PARAM_001）
+        if (request.proname() == null || request.proname().isBlank()) {
+            throw new LicenseException(ErrorCode.PARAM_001, "proname 不能为空");
+        }
+
+        // 4. 已存在实例则执行重注册（req-17）
         String instanceId = request.clientUuid() != null && !request.clientUuid().isBlank()
                 ? request.clientUuid()
                 : "inst-" + UUID.randomUUID().toString().substring(0, 8);
@@ -78,7 +83,10 @@ public class LicenseClientServiceImpl implements LicenseClientService {
             return reRegister(existing, license, request);
         }
 
-// 4. 原子占用配额（req-27 弹性配额 / req-28 多节点一致性 CAS）
+        // 5. CPU/内存配额校验（AUTH-030/031 / LICENSE_003）
+        validateCpuMemoryQuota(license, request);
+
+        // 6. 原子占用实例配额（req-27 弹性配额 / req-28 多节点一致性 CAS）
         int elasticMultiplier = getElasticQuotaMultiplier();
         boolean acquired = licenseRepository.tryAcquireInstanceQuota(license.id(), elasticMultiplier);
         if (!acquired) {
@@ -86,14 +94,17 @@ public class LicenseClientServiceImpl implements LicenseClientService {
                     "配额超弹性上限（" + elasticMultiplier + " 倍）拒绝注册");
         }
 
-        // 5. 创建实例记录
+        // 7. 占用 CPU/内存配额（AUTH-030/031）
+        licenseRepository.acquireCpuMemoryQuota(license.id(), request.currentCpus(), request.currentMemory());
+
+        // 8. 创建实例记录
         Instant now = Instant.now();
         Instance instance = new Instance(
                 null,
                 instanceId,
                 license.id(),
                 request.clientUuid(),
-                request.proname() != null ? request.proname() : license.proname(),
+                request.proname(),
                 request.productType(),
                 request.productVersion(),
                 request.productSpec(),
@@ -113,8 +124,17 @@ public class LicenseClientServiceImpl implements LicenseClientService {
         );
         instanceRepository.save(instance);
 
-int interval = parseIntConfig(SystemConfigRepository.KEY_HEARTBEAT_INTERVAL, 30);
-        return new RegisterResponse(instanceId, Instance.STATUS_ONLINE, interval, "注册成功");
+        int interval = parseIntConfig(SystemConfigRepository.KEY_HEARTBEAT_INTERVAL, 30);
+        // 弹性区间判定：used > max 返回 WARNING（AUTH-028/055），否则 SUCCESS
+        License updated = licenseRepository.findBySerial(license.serial()).orElse(license);
+        int used = updated.usedInstances() != null ? updated.usedInstances() : 0;
+        int max = updated.maxInstances() != null ? updated.maxInstances() : 0;
+        boolean elastic = max > 0 && used > max;
+        String code = elastic ? "WARNING" : "SUCCESS";
+        String message = elastic
+                ? "弹性运行模式：实例数已超过基础配额（" + max + "），当前 " + used
+                : "注册成功";
+        return new RegisterResponse(code, instanceId, Instance.STATUS_ONLINE, interval, message);
     }
 
     @Override
@@ -159,24 +179,20 @@ int interval = parseIntConfig(SystemConfigRepository.KEY_HEARTBEAT_INTERVAL, 30)
 
     @Override
     public FileApplyResponse fileApply(FileApplyRequest request) {
-        // 1. 校验通信签名（LICENSE_002）
-        verifyRequestSignature(buildFileApplyCanonical(request), request.signature());
-
-        // 2. 查找授权（LICENSE_001）
-        License license = findActiveLicense(request.serial());
-
-        // 3. 仅 local/site 模式支持授权文件申请
-        String mode = license.licenseMode();
+        // 1. 校验授权模式（AUTH-042/043：仅 local/site 支持授权文件申请）
+        String mode = request.mode();
         if (!"local".equalsIgnoreCase(mode) && !"site".equalsIgnoreCase(mode)) {
             throw new LicenseException(ErrorCode.PARAM_001,
                     "授权文件申请仅支持 local/site 模式，当前模式：" + mode);
         }
 
+        // 2. 生成申请单号并返回「待签发」状态（AUTH-071）
+        String applyId = "FA-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         return new FileApplyResponse(
-                license.serial(),
-                license.bxbFile(),
-                mode,
-                "授权文件申请成功"
+                applyId,
+                mode.toLowerCase(),
+                "PENDING",
+                "已提交 " + mode.toLowerCase() + " 授权申请 · 待签发"
         );
     }
 
@@ -222,7 +238,7 @@ int interval = parseIntConfig(SystemConfigRepository.KEY_HEARTBEAT_INTERVAL, 30)
         instanceRepository.save(updated);
 
         int interval = parseIntConfig(SystemConfigRepository.KEY_HEARTBEAT_INTERVAL, 30);
-        return new RegisterResponse(existing.instanceId(), Instance.STATUS_ONLINE, interval, "重注册成功");
+        return new RegisterResponse("SUCCESS", existing.instanceId(), Instance.STATUS_ONLINE, interval, "重注册成功");
     }
 
 /**
@@ -232,6 +248,34 @@ int interval = parseIntConfig(SystemConfigRepository.KEY_HEARTBEAT_INTERVAL, 30)
      */
     private int getElasticQuotaMultiplier() {
         return parseIntConfig(SystemConfigRepository.KEY_ELASTIC_QUOTA_MULTIPLIER, 2);
+    }
+
+    /**
+     * CPU/内存配额校验（AUTH-030/031 / LICENSE_003）。
+     *
+     * <p>当授权配置了 max_cpus / max_memory 且已用配额 + 请求配额超限时拒绝注册。
+     * 校验在占用前执行，避免部分占用后回滚。</p>
+     */
+    private void validateCpuMemoryQuota(License license, RegisterRequest request) {
+        Integer maxCpus = license.maxCpus();
+        Integer maxMemory = license.maxMemory();
+        Integer usedCpus = license.usedCpus() != null ? license.usedCpus() : 0;
+        Integer usedMemory = license.usedMemory() != null ? license.usedMemory() : 0;
+
+        if (maxCpus != null && maxCpus > 0 && request.currentCpus() != null) {
+            if ((long) usedCpus + request.currentCpus() > maxCpus) {
+                throw new LicenseException(ErrorCode.LICENSE_003,
+                        "CPU 配额不足：已用 " + usedCpus + "，请求 " + request.currentCpus()
+                                + "，上限 " + maxCpus);
+            }
+        }
+        if (maxMemory != null && maxMemory > 0 && request.currentMemory() != null) {
+            if ((long) usedMemory + request.currentMemory() > maxMemory) {
+                throw new LicenseException(ErrorCode.LICENSE_003,
+                        "内存配额不足：已用 " + usedMemory + "，请求 " + request.currentMemory()
+                                + "，上限 " + maxMemory);
+            }
+        }
     }
 
     private void verifyRequestSignature(String canonical, String signature) {
@@ -246,12 +290,6 @@ int interval = parseIntConfig(SystemConfigRepository.KEY_HEARTBEAT_INTERVAL, 30)
 
     private String buildHeartbeatCanonical(HeartbeatRequest request) {
         return join(request.instanceId(), request.serial());
-    }
-
-    private String buildFileApplyCanonical(FileApplyRequest request) {
-        return join(request.serial(), request.clientUuid(), request.proname(),
-                request.productType(), request.productVersion(), request.hostname(),
-                request.ipAddress(), request.mac());
     }
 
     private String join(String... parts) {

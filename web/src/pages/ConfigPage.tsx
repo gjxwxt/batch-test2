@@ -39,7 +39,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({ notify }) => {
 
   const startEdit = () => {
     const hb = Number(getValue('heartbeat.interval')) || 30
-    const mult = Number(getValue('heartbeat.timeoutMultiplier')) || 3
+    const mult = Number(getValue('heartbeat.timeout.count')) || 3
     setDraft({ heartbeatInterval: hb, timeoutMultiplier: mult })
     setEditOpen(true)
   }
@@ -80,7 +80,7 @@ export const ConfigPage: React.FC<ConfigPageProps> = ({ notify }) => {
 
   const rows = [
     { label: '心跳间隔', value: getValue('heartbeat.interval'), mono: true, unit: '秒' },
-    { label: '超时倍数', value: getValue('heartbeat.timeoutMultiplier'), mono: true, unit: '×' },
+    { label: '超时倍数', value: getValue('heartbeat.timeout.count'), mono: true, unit: '×' },
     { label: '归档天数', value: getValue('archive.after.days'), mono: true, unit: '天' },
     { label: '历史删除天数', value: getValue('history.delete.after.days'), mono: true, unit: '天' },
     { label: '签名盐值', value: getValue('signature.salt'), mono: true },

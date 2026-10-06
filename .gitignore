@@ -8,6 +8,9 @@ build/
 # Node & Frontend
 web/node_modules/
 web/dist/
+
+# Built frontend copied into Spring Boot static resources (make build)
+server/src/main/resources/static/
 web/.npm/
 web/*.tsbuildinfo
 npm-debug.log*

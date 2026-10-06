@@ -71,12 +71,25 @@ public final class LicenseSignature {
     }
 
     /**
-     * 依据 canonical 字段顺序构建签名原文（盐值前缀 + 各字段值拼接）。
+     * 依据 canonical 字段顺序构建签名原文（冻结契约 §4）。
+     *
+     * <p>格式：{@code InforSuiteAuth2026_<field1>=<value1>&<field2>=<value2>&...}，
+     * 字段间以 {@code &} 连接、{@code key=value} 形式，空值省略。与签发工具（tools）及
+     * 客户端 SDK 保持一致，保证签发→导入→验签全链路互通。</p>
      */
     public static String buildCanonicalString(Map<String, String> fields) {
         StringBuilder sb = new StringBuilder(SALT_PREFIX);
+        boolean first = true;
         for (String field : CANONICAL_FIELD_ORDER) {
-            sb.append(fields.getOrDefault(field, ""));
+            String value = fields.get(field);
+            if (value == null || value.isEmpty()) {
+                continue;
+            }
+            if (!first) {
+                sb.append('&');
+            }
+            sb.append(field).append('=').append(value);
+            first = false;
         }
         return sb.toString();
     }

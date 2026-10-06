@@ -61,32 +61,30 @@ class LicenseSignatureVerifierTest {
     void canonicalPayloadUsesFrozenFieldOrderAndSaltPrefix() {
         String payload = LicenseSignatureVerifier.buildCanonicalPayload(sampleFields());
 
-        String expected = "InforSuiteAuth2026_component=ias-server\n"
-                + "InforSuiteAuth2026_version=1.0.0\n"
-                + "InforSuiteAuth2026_licensee=Acme Corp\n"
-                + "InforSuiteAuth2026_mode=formal\n"
-                + "InforSuiteAuth2026_formal=true\n"
-                + "InforSuiteAuth2026_expiration=2027-12-31\n"
-                + "InforSuiteAuth2026_userinfor=production\n"
-                + "InforSuiteAuth2026_proname=InforSuite\n"
-                + "InforSuiteAuth2026_serial=LIC-2026-0001\n"
-                + "InforSuiteAuth2026_center-required=true\n"
-                + "InforSuiteAuth2026_max-instances=10\n"
-                + "InforSuiteAuth2026_max-cpus=8\n"
-                + "InforSuiteAuth2026_max-memory=16384\n";
+        String expected = "InforSuiteAuth2026_component=ias-server"
+                + "&version=1.0.0"
+                + "&licensee=Acme Corp"
+                + "&mode=formal"
+                + "&formal=true"
+                + "&expiration=2027-12-31"
+                + "&userinfor=production"
+                + "&proname=InforSuite"
+                + "&serial=LIC-2026-0001"
+                + "&center-required=true"
+                + "&max-instances=10"
+                + "&max-cpus=8"
+                + "&max-memory=16384";
 
         assertEquals(expected, payload);
     }
 
     @Test
-    void missingFieldsAreEmittedAsEmptyValues() {
+    void missingFieldsAreOmittedFromPayload() {
         Map<String, String> fields = new LinkedHashMap<>();
         fields.put("component", "x");
         String payload = LicenseSignatureVerifier.buildCanonicalPayload(fields);
 
-        assertTrue(payload.startsWith("InforSuiteAuth2026_component=x\n"));
-        assertTrue(payload.contains("InforSuiteAuth2026_version=\n"));
-        assertTrue(payload.contains("InforSuiteAuth2026_max-memory=\n"));
+        assertEquals("InforSuiteAuth2026_component=x", payload);
     }
 
     @Test

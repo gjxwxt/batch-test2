@@ -192,9 +192,10 @@ class ElasticQuotaServiceTest {
 
     private License seedLicense(String serial, int maxInstances) {
         Instant now = Instant.now();
+        // maxCpus/maxMemory 置 0（不限制），避免 CPU/内存配额校验（AUTH-030/031）干扰实例数配额测试
         License license = new License(
                 null, serial, "Test License", "AS", "Server", "1.0", "Test Corp",
-                "center", "true", "never", "test-user", maxInstances, 8, 16384,
+                "center", "true", "never", "test-user", maxInstances, 0, 0,
                 0, maxInstances, 0, 0, "<license><serial>" + serial + "</serial></license>",
                 License.STATUS_ACTIVE, "FILE", now, now);
         return licenseRepository.save(license);

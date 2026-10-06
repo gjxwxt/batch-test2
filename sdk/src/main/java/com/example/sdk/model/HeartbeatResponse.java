@@ -3,17 +3,16 @@ package com.example.sdk.model;
 /**
  * Response from {@code POST /api/v1/license/heartbeat}.
  *
- * <p>When the center detects a quota breach or a disabled license it returns a
- * non-{@code SUCCESS} code so the embedded client can react (e.g. throttle or
- * stop the product).</p>
+ * <p>Field names mirror the server's {@code HeartbeatResponse} DTO
+ * ({@code instanceId}/{@code status}/{@code serverTime}/{@code message}).</p>
  */
 public record HeartbeatResponse(
-        String code,
-        String message,
-        Boolean accepted,
-        Long nextHeartbeatIntervalSeconds) {
+        String instanceId,
+        String status,
+        String serverTime,
+        String message) {
 
     public boolean isSuccess() {
-        return "SUCCESS".equalsIgnoreCase(code);
+        return "ONLINE".equalsIgnoreCase(status);
     }
 }

@@ -203,32 +203,24 @@ class LicenseClientServiceTest {
     }
 
     @Test
-    @DisplayName("local 模式授权文件申请成功返回授权文件")
+    @DisplayName("local 模式授权文件申请成功返回待签发申请单")
     void shouldApplyFileForLocalMode() {
-        License license = seedLicense("serial-file-local", 10);
-        License local = new License(
-                license.id(), license.serial(), license.licenseName(), license.proname(),
-                license.component(), license.version(), license.licensee(), "local",
-                license.formal(), license.expiration(), license.userinfor(), license.maxInstances(),
-                license.maxCpus(), license.maxMemory(), license.usedInstances(), license.remainingInstances(),
-                license.usedCpus(), license.usedMemory(), license.bxbFile(), license.status(),
-                license.source(), license.createTime(), license.updateTime());
-        licenseRepository.save(local);
+        FileApplyRequest request = new FileApplyRequest(
+                "local", "InforSuite AS", "企业版", "示例客户", 10, null, null);
 
-        FileApplyRequest request = signedFileApply("serial-file-local", "client-uuid-f");
         FileApplyResponse response = service.fileApply(request);
 
-        assertThat(response.serial()).isEqualTo("serial-file-local");
-        assertThat(response.licenseMode()).isEqualTo("local");
-        assertThat(response.licenseFile()).isNotBlank();
+        assertThat(response.applyId()).isNotBlank();
+        assertThat(response.mode()).isEqualTo("local");
+        assertThat(response.status()).isEqualTo("PENDING");
+        assertThat(response.message()).contains("待签发");
     }
 
     @Test
     @DisplayName("center 模式授权文件申请抛出 PARAM_001")
     void shouldRejectFileApplyForCenterMode() {
-        seedLicense("serial-file-center", 10);
-
-        FileApplyRequest request = signedFileApply("serial-file-center", "client-uuid-c");
+        FileApplyRequest request = new FileApplyRequest(
+                "center", "InforSuite AS", "企业版", "示例客户", 10, null, null);
 
         assertThatThrownBy(() -> service.fileApply(request))
                 .isInstanceOf(LicenseException.class)
@@ -266,15 +258,4 @@ class LicenseClientServiceTest {
         return new HeartbeatRequest(instanceId, serial, 4, 8192, signature);
     }
 
-    private FileApplyRequest signedFileApply(String serial, String clientUuid) {
-        // canonical 与 LicenseClientServiceImpl.buildFileApplyCanonical 保持一致：
-        // serial + clientUuid + proname + productType + productVersion
-        //   + hostname + ipAddress + mac
-        String canonical = serial + clientUuid + "AS" + "" + ""
-                + "host-1" + "192.168.1.10" + "AA:BB:CC";
-        String signature = CommunicationSignature.sign(canonical, privateKey);
-        return new FileApplyRequest(
-                serial, clientUuid, "AS", null, null,
-                "host-1", "192.168.1.10", "AA:BB:CC", signature);
     }
-}

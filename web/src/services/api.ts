@@ -86,7 +86,7 @@ export const api = {
   // 健康检查（无鉴权）
   // ------------------------------------------------------------
   async getHealth(): Promise<HealthResponse> {
-    const res = await fetch('/api/health')
+    const res = await fetch('/api/v1/health')
     return handleResponse<HealthResponse>(res)
   },
 

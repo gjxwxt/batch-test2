@@ -165,8 +165,17 @@ class LicenseVerifierTest {
 
     private String canonicalString(Map<String, String> fields) {
         StringBuilder sb = new StringBuilder(SALT_PREFIX);
+        boolean first = true;
         for (String key : CANONICAL_ORDER) {
-            sb.append(fields.getOrDefault(key, ""));
+            String value = fields.get(key);
+            if (value == null || value.isEmpty()) {
+                continue;
+            }
+            if (!first) {
+                sb.append('&');
+            }
+            sb.append(key).append('=').append(value);
+            first = false;
         }
         return sb.toString();
     }

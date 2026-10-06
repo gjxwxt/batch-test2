@@ -1,5 +1,6 @@
 package com.example.sdk;
 
+import com.example.sdk.crypto.CommunicationSigner;
 import com.example.sdk.exception.SdkErrorCode;
 import com.example.sdk.exception.SdkException;
 import com.example.sdk.http.HttpTransport;
@@ -11,6 +12,7 @@ import com.example.sdk.model.PublicKeyResponse;
 import com.example.sdk.model.RegisterRequest;
 import com.example.sdk.model.RegisterResponse;
 
+import java.security.PrivateKey;
 import java.time.Duration;
 
 /**
@@ -33,10 +35,12 @@ public final class SdkClient {
 
     private final String baseUrl;
     private final HttpTransport transport;
+    private final PrivateKey communicationPrivateKey;
 
-    private SdkClient(String baseUrl, HttpTransport transport) {
+    private SdkClient(String baseUrl, HttpTransport transport, PrivateKey communicationPrivateKey) {
         this.baseUrl = stripTrailingSlash(baseUrl);
         this.transport = transport;
+        this.communicationPrivateKey = communicationPrivateKey;
     }
 
     /**
@@ -57,10 +61,24 @@ public final class SdkClient {
      * @return a configured {@link SdkClient}
      */
     public static SdkClient create(String baseUrl, Duration timeout) {
+        return create(baseUrl, timeout, null);
+    }
+
+    /**
+     * Create a client with a custom request timeout and a communication private
+     * key used to sign register/heartbeat/file-apply requests (dual-key
+     * contract, O6).
+     *
+     * @param baseUrl                center base URL
+     * @param timeout                per-request timeout
+     * @param communicationPrivateKey client's communication private key (may be null)
+     * @return a configured {@link SdkClient}
+     */
+    public static SdkClient create(String baseUrl, Duration timeout, PrivateKey communicationPrivateKey) {
         if (baseUrl == null || baseUrl.isBlank()) {
             throw new SdkException(SdkErrorCode.PARAM_001.code(), "baseUrl must not be blank");
         }
-        return new SdkClient(baseUrl, new HttpTransport(timeout));
+        return new SdkClient(baseUrl, new HttpTransport(timeout), communicationPrivateKey);
     }
 
     /**
@@ -86,6 +104,9 @@ public final class SdkClient {
     /**
      * Register a client instance with the center.
      *
+     * <p>If a communication private key is configured, the request is signed
+     * with it before sending (dual-key contract, O6).</p>
+     *
      * @param request the registration payload
      * @return the {@link RegisterResponse}
      */
@@ -93,13 +114,17 @@ public final class SdkClient {
         if (request == null) {
             throw new SdkException(SdkErrorCode.PARAM_001.code(), "register request must not be null");
         }
+        RegisterRequest signed = signRegister(request);
         String json = transport.postJson(baseUrl + "/api/v1/license/register",
-                JsonCodec.write(request), null);
+                JsonCodec.write(signed), null);
         return JsonCodec.read(json, RegisterResponse.class);
     }
 
     /**
      * Send a heartbeat for a registered instance.
+     *
+     * <p>If a communication private key is configured, the request is signed
+     * with it before sending (dual-key contract, O6).</p>
      *
      * @param request the heartbeat payload
      * @return the {@link HeartbeatResponse}
@@ -108,8 +133,9 @@ public final class SdkClient {
         if (request == null) {
             throw new SdkException(SdkErrorCode.PARAM_001.code(), "heartbeat request must not be null");
         }
+        HeartbeatRequest signed = signHeartbeat(request);
         String json = transport.postJson(baseUrl + "/api/v1/license/heartbeat",
-                JsonCodec.write(request), null);
+                JsonCodec.write(signed), null);
         return JsonCodec.read(json, HeartbeatResponse.class);
     }
 
@@ -124,6 +150,30 @@ public final class SdkClient {
             throw new SdkException(SdkErrorCode.PARAM_001.code(), "apply payload must not be blank");
         }
         return transport.postJson(baseUrl + "/api/v1/license/file-apply", payload, null);
+    }
+
+    private RegisterRequest signRegister(RegisterRequest request) {
+        if (communicationPrivateKey == null) {
+            return request;
+        }
+        String canonical = CommunicationSigner.buildRegisterCanonical(request);
+        return new RegisterRequest(
+                request.serial(), request.clientUuid(), request.proname(),
+                request.productType(), request.productVersion(), request.productSpec(),
+                request.hostname(), request.ipAddress(), request.mac(), request.machineType(),
+                request.currentCpus(), request.currentMemory(), request.extendedAttributes(),
+                CommunicationSigner.sign(canonical, communicationPrivateKey));
+    }
+
+    private HeartbeatRequest signHeartbeat(HeartbeatRequest request) {
+        if (communicationPrivateKey == null) {
+            return request;
+        }
+        String canonical = CommunicationSigner.buildHeartbeatCanonical(request);
+        return new HeartbeatRequest(
+                request.instanceId(), request.serial(), request.currentCpus(),
+                request.currentMemory(),
+                CommunicationSigner.sign(canonical, communicationPrivateKey));
     }
 
     private static String stripTrailingSlash(String url) {

@@ -138,8 +138,17 @@ public class SelfLicenseValidator {
 
     private String buildCanonicalString(Document doc) {
         StringBuilder sb = new StringBuilder(SALT_PREFIX);
+        boolean first = true;
         for (String field : CANONICAL_FIELD_ORDER) {
-            sb.append(textOf(doc, field));
+            String value = textOf(doc, field);
+            if (value == null || value.isEmpty()) {
+                continue;
+            }
+            if (!first) {
+                sb.append('&');
+            }
+            sb.append(field).append('=').append(value);
+            first = false;
         }
         return sb.toString();
     }

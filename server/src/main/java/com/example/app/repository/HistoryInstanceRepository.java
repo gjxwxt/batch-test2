@@ -1,6 +1,6 @@
 package com.example.app.repository;
 
-import com.example.app.model.Instance;
+import com.example.app.model.HistoryInstance;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -12,53 +12,37 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 在线实例仓储（内存实现）。
+ * 历史实例仓储（内存实现）。
  *
- * <p>后续可替换为 MyBatis-Plus + PostgreSQL 实现（infra:scaffold）。
- * 心跳时间维护在内存并批量落库（需求约束）。</p>
+ * <p>对应共享契约 6 表 DDL 中的 {@code history_instance} 表（infra:ddl）。
+ * 由归档调度（req-19）写入、历史清理（req-20）删除、历史查询（IAS_AUTH_INST_HISTORY）读取。</p>
  */
 @Repository
-public class InstanceRepository {
+public class HistoryInstanceRepository {
 
-    private final ConcurrentMap<Long, Instance> storage = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, HistoryInstance> storage = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Long> instanceIdIndex = new ConcurrentHashMap<>();
     private final AtomicLong idSequence = new AtomicLong(1);
 
-    public List<Instance> findAll() {
-        List<Instance> instances = new ArrayList<>(storage.values());
-        instances.sort(Comparator.comparing(Instance::createTime).reversed());
+    public List<HistoryInstance> findAll() {
+        List<HistoryInstance> instances = new ArrayList<>(storage.values());
+        instances.sort(Comparator.comparing(HistoryInstance::archivedTime).reversed());
         return instances;
     }
 
-/** 按状态查询实例（ONLINE / OFFLINE），按上线时间倒序。 */
-    public List<Instance> findByStatus(String status) {
-        List<Instance> instances = new ArrayList<>();
-        for (Instance instance : storage.values()) {
-            if (status == null || status.equals(instance.status())) {
-                instances.add(instance);
-            }
-        }
-        instances.sort(Comparator.comparing(Instance::onlineTime,
-                Comparator.nullsLast(Comparator.reverseOrder())));
-        return instances;
-    }
-    public Optional<Instance> findById(Long id) {
+    public Optional<HistoryInstance> findById(Long id) {
         return Optional.ofNullable(storage.get(id));
     }
 
-    public Optional<Instance> findByInstanceId(String instanceId) {
+    public Optional<HistoryInstance> findByInstanceId(String instanceId) {
         Long id = instanceIdIndex.get(instanceId);
         return id == null ? Optional.empty() : Optional.ofNullable(storage.get(id));
     }
 
-    public boolean existsByInstanceId(String instanceId) {
-        return instanceIdIndex.containsKey(instanceId);
-    }
-
-    public Instance save(Instance instance) {
-        Instance toStore = instance;
+    public HistoryInstance save(HistoryInstance instance) {
+        HistoryInstance toStore = instance;
         if (instance.id() == null) {
-            toStore = new Instance(
+            toStore = new HistoryInstance(
                     idSequence.getAndIncrement(),
                     instance.instanceId(),
                     instance.licenseId(),
@@ -78,6 +62,7 @@ public class InstanceRepository {
                     instance.onlineTime(),
                     instance.lastHeartbeatTime(),
                     instance.offlineTime(),
+                    instance.archivedTime(),
                     instance.createTime(),
                     instance.updateTime()
             );
@@ -88,7 +73,7 @@ public class InstanceRepository {
     }
 
     public boolean deleteById(Long id) {
-        Instance removed = storage.remove(id);
+        HistoryInstance removed = storage.remove(id);
         if (removed != null) {
             instanceIdIndex.remove(removed.instanceId());
             return true;

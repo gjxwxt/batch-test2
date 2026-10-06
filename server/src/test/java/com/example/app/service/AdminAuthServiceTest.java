@@ -9,6 +9,7 @@ import com.example.app.model.LoginRequest;
 import com.example.app.model.LoginResponse;
 import com.example.app.repository.AdminUserRepository;
 import com.example.app.service.impl.AdminAuthServiceImpl;
+import com.example.app.service.impl.AuditServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,8 @@ class AdminAuthServiceTest {
         adminUserRepository = mock(AdminUserRepository.class);
         jwtTokenService = mock(JwtTokenService.class);
         passwordEncoder = new BCryptPasswordEncoder();
-        adminAuthService = new AdminAuthServiceImpl(adminUserRepository, jwtTokenService, passwordEncoder);
+        AuditServiceImpl auditService = new AuditServiceImpl(new com.example.app.repository.AuditLogRepository());
+        adminAuthService = new AdminAuthServiceImpl(adminUserRepository, jwtTokenService, passwordEncoder, auditService);
     }
 
     private AdminUser seedUser() {

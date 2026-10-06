@@ -179,6 +179,28 @@ class StatisticsServiceTest {
     }
 
     @Test
+    @DisplayName("AUTH-061 配额使用率 ≥90% 产生 WARN，≥95% 产生 CRITICAL")
+    void shouldAlertAtNinetyAndNinetyFivePercent() {
+        Instant now = Instant.now();
+        // 90%：used=9/max=10 → WARN
+        licenseRepository.save(license(1L, "S90", License.STATUS_ACTIVE, "never", 10, 9, 8, 8, 16384, 16384, now));
+        // 95%：used=19/max=20 → CRITICAL
+        licenseRepository.save(license(2L, "S95", License.STATUS_ACTIVE, "never", 20, 19, 8, 8, 16384, 16384, now));
+        // 50%：used=5/max=10 → 无告警
+        licenseRepository.save(license(3L, "S50", License.STATUS_ACTIVE, "never", 10, 5, 8, 4, 16384, 8192, now));
+
+        List<StatisticsAlert> alerts = statisticsService.alerts();
+
+        assertThat(alerts).anyMatch(a -> StatisticsAlert.TYPE_QUOTA_WARNING.equals(a.type())
+                && StatisticsAlert.LEVEL_WARN.equals(a.level())
+                && "S90".equals(a.target()));
+        assertThat(alerts).anyMatch(a -> StatisticsAlert.TYPE_QUOTA_WARNING.equals(a.type())
+                && StatisticsAlert.LEVEL_CRITICAL.equals(a.level())
+                && "S95".equals(a.target()));
+        assertThat(alerts).noneMatch(a -> "S50".equals(a.target()));
+    }
+
+    @Test
     @DisplayName("export 输出 CSV 统计文本")
     void shouldExportCsv() {
         Instant now = Instant.now();

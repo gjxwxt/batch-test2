@@ -163,7 +163,8 @@ class LicenseClientControllerTest {
     @DisplayName("POST /api/v1/license/file-apply 授权文件申请成功返回 200")
     void shouldApplyFileSuccessfully() throws Exception {
         when(licenseClientService.fileApply(any(FileApplyRequest.class)))
-                .thenReturn(new FileApplyResponse("FA-ABC12345", "local", "PENDING", "已提交 local 授权申请 · 待签发"));
+                .thenReturn(new FileApplyResponse("FA-ABC12345", "local", "SUCCESS",
+                        "已生成 local 模式授权文件", "<license><mode>local</mode><signature>sig</signature></license>"));
 
         FileApplyRequest request = new FileApplyRequest(
                 "local", "InforSuite AS", "企业版", "示例客户", 10, null, null);
@@ -174,7 +175,8 @@ class LicenseClientControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.applyId").value("FA-ABC12345"))
                 .andExpect(jsonPath("$.mode").value("local"))
-                .andExpect(jsonPath("$.status").value("PENDING"));
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
+                .andExpect(jsonPath("$.licenseFile").value("<license><mode>local</mode><signature>sig</signature></license>"));
     }
 
     @Test

@@ -4,11 +4,13 @@ import com.example.app.auth.JwtTokenService;
 import com.example.app.exception.AuthException;
 import com.example.app.exception.ErrorCode;
 import com.example.app.model.AdminUser;
+import com.example.app.model.AuditOperationType;
 import com.example.app.model.ChangePasswordRequest;
 import com.example.app.model.LoginRequest;
 import com.example.app.model.LoginResponse;
 import com.example.app.repository.AdminUserRepository;
 import com.example.app.service.AdminAuthService;
+import com.example.app.service.AuditService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -27,13 +29,16 @@ public class AdminAuthServiceImpl implements AdminAuthService {
     private final AdminUserRepository adminUserRepository;
     private final JwtTokenService jwtTokenService;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
     public AdminAuthServiceImpl(AdminUserRepository adminUserRepository,
                                 JwtTokenService jwtTokenService,
-                                PasswordEncoder passwordEncoder) {
+                                PasswordEncoder passwordEncoder,
+                                AuditService auditService) {
         this.adminUserRepository = adminUserRepository;
         this.jwtTokenService = jwtTokenService;
         this.passwordEncoder = passwordEncoder;
+        this.auditService = auditService;
     }
 
     @Override
@@ -63,6 +68,8 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         adminUserRepository.save(updated);
 
         String token = jwtTokenService.issueToken(user.username());
+        auditService.record(AuditOperationType.LOGIN, user.username(), clientIp,
+                user.username(), "SUCCESS", "管理员登录成功");
         return new LoginResponse(token, user.username(), "Bearer");
     }
 
@@ -91,5 +98,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
                 Instant.now()
         );
         adminUserRepository.save(updated);
+        auditService.record(AuditOperationType.CHANGE_PASSWORD, username, null,
+                username, "SUCCESS", "管理员修改密码成功");
     }
 }

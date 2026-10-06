@@ -8,7 +8,10 @@ import com.example.app.model.License;
 import com.example.app.model.LicenseImportRequest;
 import com.example.app.model.LicenseSummary;
 import com.example.app.model.LicenseVerifyResponse;
+import com.example.app.repository.AuditLogRepository;
+import com.example.app.repository.InstanceRepository;
 import com.example.app.repository.LicenseRepository;
+import com.example.app.service.impl.AuditServiceImpl;
 import com.example.app.service.impl.LicenseAdminServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,14 +48,18 @@ class LicenseAdminServiceTest {
     private LicenseRepository repository;
     private LicenseAdminService service;
     private KeyPair keyPair;
+    private LicensePublicKeyProvider provider;
+    private LicenseVerifier verifier;
 
     @BeforeEach
     void setUp() throws Exception {
         repository = new LicenseRepository();
         keyPair = generateKeyPair();
-        LicensePublicKeyProvider provider = new LicensePublicKeyProvider(encodePublicKey(keyPair.getPublic()));
-        LicenseVerifier verifier = new LicenseVerifier(provider);
-        service = new LicenseAdminServiceImpl(repository, provider, verifier);
+        provider = new LicensePublicKeyProvider(encodePublicKey(keyPair.getPublic()));
+        verifier = new LicenseVerifier(provider);
+        AuditServiceImpl auditService = new AuditServiceImpl(new AuditLogRepository());
+        service = new LicenseAdminServiceImpl(repository, provider, verifier, auditService,
+                new InstanceRepository());
     }
 
     @Test
@@ -129,11 +136,36 @@ class LicenseAdminServiceTest {
         String xml = signedXml(fields, keyPair.getPrivate());
         service.importLicense(new LicenseImportRequest(xml, "List License"));
 
-        List<LicenseSummary> summaries = service.listLicenses();
+        List<LicenseSummary> summaries = service.listLicenses(null, null, null);
 
         assertThat(summaries).hasSize(1);
         assertThat(summaries.get(0).serial()).isEqualTo("serial-list-001");
         assertThat(summaries.get(0).status()).isEqualTo(License.STATUS_ACTIVE);
+    }
+
+    @Test
+    @DisplayName("AUTH-023 授权列表支持状态过滤与分页")
+    void shouldFilterAndPaginateLicenses() throws Exception {
+        for (int i = 0; i < 5; i++) {
+            Map<String, String> fields = validFields("serial-page-" + i);
+            String xml = signedXml(fields, keyPair.getPrivate());
+            service.importLicense(new LicenseImportRequest(xml, null));
+        }
+        // 禁用一条，制造状态差异
+        License first = service.getLicense(1L);
+        service.disableLicense(first.id());
+
+        // 状态过滤：仅 ACTIVE
+        List<LicenseSummary> active = service.listLicenses("ACTIVE", null, null);
+        assertThat(active).hasSize(4);
+
+        // 分页：page=1, size=2 → 2 条
+        List<LicenseSummary> page1 = service.listLicenses(null, 1, 2);
+        assertThat(page1).hasSize(2);
+
+        // 总数
+        assertThat(service.countLicenses(null)).isEqualTo(5);
+        assertThat(service.countLicenses("ACTIVE")).isEqualTo(4);
     }
 
     @Test
@@ -195,6 +227,113 @@ class LicenseAdminServiceTest {
         License disabled = service.disableLicense(imported.id());
 
         assertThat(disabled.status()).isEqualTo(License.STATUS_DISABLED);
+    }
+
+    // ---- AUTH-016/017/018/019 防篡改自动修复/禁用/警告（CRITICAL-2）----
+
+    @Test
+    @DisplayName("AUTH-016 签名完好但字段被 DBA 篡改时自动修复数据库字段并保持 ACTIVE")
+    void shouldAutoRepairTamperedFields() throws Exception {
+        Map<String, String> fields = validFields("serial-tamper-016");
+        String xml = signedXml(fields, keyPair.getPrivate());
+        License imported = service.importLicense(new LicenseImportRequest(xml, null));
+
+        // 模拟 DBA 篡改 max_instances 与 expiration
+        License tampered = new License(
+                imported.id(), imported.serial(), imported.licenseName(), imported.proname(),
+                imported.component(), imported.version(), imported.licensee(), imported.licenseMode(),
+                imported.formal(), "2099-01-01", imported.userinfor(), 999, imported.maxCpus(),
+                imported.maxMemory(), imported.usedInstances(), imported.remainingInstances(),
+                imported.usedCpus(), imported.usedMemory(), imported.bxbFile(), imported.status(),
+                imported.source(), imported.createTime(), imported.updateTime());
+        repository.save(tampered);
+
+        LicenseVerifyResponse response = service.verifyLicense(imported.id());
+
+        assertThat(response.verified()).isTrue();
+        License repaired = service.getLicense(imported.id());
+        assertThat(repaired.maxInstances()).isEqualTo(10);
+        assertThat(repaired.expiration()).isEqualTo("never");
+        assertThat(repaired.status()).isEqualTo(License.STATUS_ACTIVE);
+    }
+
+    @Test
+    @DisplayName("AUTH-017 签名破坏时授权被标记 DISABLED（不可逆）")
+    void shouldDisableLicenseOnSignatureBreak() throws Exception {
+        Map<String, String> fields = validFields("serial-tamper-017");
+        String xml = signedXml(fields, keyPair.getPrivate());
+        License imported = service.importLicense(new LicenseImportRequest(xml, null));
+
+        // 替换授权文件破坏签名
+        String tamperedXml = xml.replace("Test Corp", "Evil Corp");
+        License tampered = new License(
+                imported.id(), imported.serial(), imported.licenseName(), imported.proname(),
+                imported.component(), imported.version(), imported.licensee(), imported.licenseMode(),
+                imported.formal(), imported.expiration(), imported.userinfor(), imported.maxInstances(),
+                imported.maxCpus(), imported.maxMemory(), imported.usedInstances(),
+                imported.remainingInstances(), imported.usedCpus(), imported.usedMemory(),
+                tamperedXml, imported.status(), imported.source(), imported.createTime(),
+                imported.updateTime());
+        repository.save(tampered);
+
+        LicenseVerifyResponse response = service.verifyLicense(imported.id());
+
+        assertThat(response.verified()).isFalse();
+        License after = service.getLicense(imported.id());
+        assertThat(after.status()).isEqualTo(License.STATUS_DISABLED);
+    }
+
+    @Test
+    @DisplayName("AUTH-018 配额守恒被破坏时自动修复 remaining=max-used")
+    void shouldRepairQuotaConservation() throws Exception {
+        Map<String, String> fields = validFields("serial-tamper-018");
+        String xml = signedXml(fields, keyPair.getPrivate());
+        License imported = service.importLicense(new LicenseImportRequest(xml, null));
+
+        // 模拟 DBA 修改 used_instances 破坏守恒（used=3, remaining=7, max=10 → 3+7=10 正常；
+        // 改为 used=5, remaining=7 → 5+7=12≠10 破坏）
+        License tampered = new License(
+                imported.id(), imported.serial(), imported.licenseName(), imported.proname(),
+                imported.component(), imported.version(), imported.licensee(), imported.licenseMode(),
+                imported.formal(), imported.expiration(), imported.userinfor(), imported.maxInstances(),
+                imported.maxCpus(), imported.maxMemory(), 5, 7, imported.usedCpus(),
+                imported.usedMemory(), imported.bxbFile(), imported.status(), imported.source(),
+                imported.createTime(), imported.updateTime());
+        repository.save(tampered);
+
+        LicenseVerifyResponse response = service.verifyLicense(imported.id());
+
+        assertThat(response.verified()).isTrue();
+        License repaired = service.getLicense(imported.id());
+        assertThat(repaired.remainingInstances()).isEqualTo(5); // 10 - 5
+    }
+
+    @Test
+    @DisplayName("AUTH-019 实际在线实例数大于 used_instances 时返回 WARNING")
+    void shouldReturnWarningOnInstanceCountMismatch() throws Exception {
+        Map<String, String> fields = validFields("serial-tamper-019");
+        String xml = signedXml(fields, keyPair.getPrivate());
+        License imported = service.importLicense(new LicenseImportRequest(xml, null));
+
+        // 构造 3 个在线实例，但 used_instances=0
+        InstanceRepository instanceRepo = new InstanceRepository();
+        for (int i = 0; i < 3; i++) {
+            instanceRepo.save(new com.example.app.model.Instance(
+                    null, "inst-" + i, imported.id(), "uuid-" + i, "InforSuiteAS", "AS",
+                    "1.0", "standard", "host-" + i, "10.0.0." + i, "mac-" + i, "VM",
+                    2, 4096, null, com.example.app.model.Instance.STATUS_ONLINE,
+                    java.time.Instant.now(), java.time.Instant.now(), null,
+                    java.time.Instant.now(), java.time.Instant.now()));
+        }
+        // 重新构造 service 注入含实例的仓储
+        AuditServiceImpl auditService = new AuditServiceImpl(new AuditLogRepository());
+        LicenseAdminService svc = new LicenseAdminServiceImpl(repository, provider, verifier,
+                auditService, instanceRepo);
+
+        LicenseVerifyResponse response = svc.verifyLicense(imported.id());
+
+        assertThat(response.verified()).isTrue();
+        assertThat(response.message()).contains("WARNING");
     }
 
     // ---- helpers ----

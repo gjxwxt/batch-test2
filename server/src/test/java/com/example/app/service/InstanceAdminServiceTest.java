@@ -4,9 +4,11 @@ import com.example.app.exception.ErrorCode;
 import com.example.app.exception.LicenseException;
 import com.example.app.model.HistoryInstance;
 import com.example.app.model.Instance;
+import com.example.app.repository.AuditLogRepository;
 import com.example.app.repository.HistoryInstanceRepository;
 import com.example.app.repository.InstanceRepository;
 import com.example.app.repository.SystemConfigRepository;
+import com.example.app.service.impl.AuditServiceImpl;
 import com.example.app.service.impl.InstanceAdminServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,7 +39,8 @@ class InstanceAdminServiceTest {
         instanceRepository = new InstanceRepository();
         historyInstanceRepository = new HistoryInstanceRepository();
         systemConfigRepository = new SystemConfigRepository();
-        service = new InstanceAdminServiceImpl(instanceRepository, historyInstanceRepository, systemConfigRepository);
+        AuditServiceImpl auditService = new AuditServiceImpl(new AuditLogRepository());
+        service = new InstanceAdminServiceImpl(instanceRepository, historyInstanceRepository, systemConfigRepository, auditService);
     }
 
     private Instance onlineInstance(String instanceId, Instant lastHeartbeat) {

@@ -43,6 +43,14 @@ public class InstanceRepository {
         return instances;
     }
 
+    /** 统计某授权下在线实例数（AUTH-019 实例数交叉验证）。 */
+    public long countOnlineByLicenseId(Long licenseId) {
+        return storage.values().stream()
+                .filter(i -> Instance.STATUS_ONLINE.equals(i.status()))
+                .filter(i -> licenseId == null || licenseId.equals(i.licenseId()))
+                .count();
+    }
+
     public Optional<Instance> findById(Long id) {
         return Optional.ofNullable(storage.get(id));
     }

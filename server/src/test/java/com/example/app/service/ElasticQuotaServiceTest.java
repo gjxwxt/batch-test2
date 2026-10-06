@@ -4,13 +4,17 @@ import com.example.app.exception.ErrorCode;
 import com.example.app.exception.LicenseException;
 import com.example.app.license.CommunicationKeyProvider;
 import com.example.app.license.CommunicationSignature;
+import com.example.app.license.LicenseFileGenerator;
+import com.example.app.license.LicenseSigningKeyProvider;
 import com.example.app.model.Instance;
 import com.example.app.model.License;
 import com.example.app.model.RegisterRequest;
 import com.example.app.model.RegisterResponse;
+import com.example.app.repository.AuditLogRepository;
 import com.example.app.repository.InstanceRepository;
 import com.example.app.repository.LicenseRepository;
 import com.example.app.repository.SystemConfigRepository;
+import com.example.app.service.impl.AuditServiceImpl;
 import com.example.app.service.impl.LicenseClientServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,7 +54,10 @@ class ElasticQuotaServiceTest {
         systemConfigRepository = new SystemConfigRepository();
         keyProvider = new CommunicationKeyProvider(null);
         privateKey = keyProvider.getPrivateKey();
-        service = new LicenseClientServiceImpl(keyProvider, licenseRepository, instanceRepository, systemConfigRepository);
+        AuditServiceImpl auditService = new AuditServiceImpl(new AuditLogRepository());
+        LicenseFileGenerator licenseFileGenerator = new LicenseFileGenerator(new LicenseSigningKeyProvider(""));
+        service = new LicenseClientServiceImpl(keyProvider, licenseRepository, instanceRepository,
+                systemConfigRepository, auditService, licenseFileGenerator);
     }
 
     @Test

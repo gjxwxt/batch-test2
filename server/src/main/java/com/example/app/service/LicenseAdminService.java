@@ -24,8 +24,18 @@ public interface LicenseAdminService {
 
     /**
      * 授权列表（IAS_AUTH_LIST）。
+     *
+     * @param status 状态过滤（ACTIVE / DISABLED / EXPIRED，可空表示不过滤）
+     * @param page   页码（从 1 开始，可空默认 1）
+     * @param size   每页条数（可空默认 20）
+     * @return 过滤并分页后的授权概要列表
      */
-    List<LicenseSummary> listLicenses();
+    List<LicenseSummary> listLicenses(String status, Integer page, Integer size);
+
+    /**
+     * 统计符合状态过滤条件的授权总数（AUTH-023 分页 total）。
+     */
+    long countLicenses(String status);
 
     /**
      * 授权详情（IAS_AUTH_DETAIL）。

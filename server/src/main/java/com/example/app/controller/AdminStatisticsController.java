@@ -1,9 +1,11 @@
 package com.example.app.controller;
 
+import com.example.app.model.AuditOperationType;
 import com.example.app.model.StatisticsAlert;
 import com.example.app.model.StatisticsDashboard;
 import com.example.app.model.StatisticsOverview;
 import com.example.app.model.StatisticsTrend;
+import com.example.app.service.AuditService;
 import com.example.app.service.StatisticsService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -31,9 +33,12 @@ import java.util.List;
 public class AdminStatisticsController {
 
     private final StatisticsService statisticsService;
+    private final AuditService auditService;
 
-    public AdminStatisticsController(StatisticsService statisticsService) {
+    public AdminStatisticsController(StatisticsService statisticsService,
+                                     AuditService auditService) {
         this.statisticsService = statisticsService;
+        this.auditService = auditService;
     }
 
     /**
@@ -42,7 +47,10 @@ public class AdminStatisticsController {
      */
     @GetMapping
     public ResponseEntity<StatisticsOverview> overview() {
-        return ResponseEntity.ok(statisticsService.overview());
+        StatisticsOverview result = statisticsService.overview();
+        auditService.record(AuditOperationType.STATISTICS_QUERY, "admin", null,
+                null, "SUCCESS", "查询统计总览");
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -52,7 +60,10 @@ public class AdminStatisticsController {
     @GetMapping("/trend")
     public ResponseEntity<StatisticsTrend> trend(
             @RequestParam(value = "days", required = false, defaultValue = "30") int days) {
-        return ResponseEntity.ok(statisticsService.trend(days));
+        StatisticsTrend result = statisticsService.trend(days);
+        auditService.record(AuditOperationType.STATISTICS_QUERY, "admin", null,
+                null, "SUCCESS", "查询统计趋势，days=" + days);
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -61,7 +72,10 @@ public class AdminStatisticsController {
      */
     @GetMapping("/dashboard-v2")
     public ResponseEntity<StatisticsDashboard> dashboardV2() {
-        return ResponseEntity.ok(statisticsService.dashboardV2());
+        StatisticsDashboard result = statisticsService.dashboardV2();
+        auditService.record(AuditOperationType.STATISTICS_QUERY, "admin", null,
+                null, "SUCCESS", "查询 Dashboard v2");
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -70,7 +84,10 @@ public class AdminStatisticsController {
      */
     @GetMapping("/alerts")
     public ResponseEntity<List<StatisticsAlert>> alerts() {
-        return ResponseEntity.ok(statisticsService.alerts());
+        List<StatisticsAlert> result = statisticsService.alerts();
+        auditService.record(AuditOperationType.STATISTICS_QUERY, "admin", null,
+                null, "SUCCESS", "查询告警列表，共 " + result.size() + " 条");
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -79,6 +96,9 @@ public class AdminStatisticsController {
      */
     @GetMapping(value = "/export", produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> export() {
-        return ResponseEntity.ok(statisticsService.export());
+        String result = statisticsService.export();
+        auditService.record(AuditOperationType.STATISTICS_QUERY, "admin", null,
+                null, "SUCCESS", "导出统计报表");
+        return ResponseEntity.ok(result);
     }
 }

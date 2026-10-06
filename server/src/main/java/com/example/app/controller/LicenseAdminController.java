@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -45,11 +46,21 @@ public class LicenseAdminController {
     }
 
     /**
-     * IAS_AUTH_LIST — 授权列表查询。
+     * IAS_AUTH_LIST — 授权列表查询（AUTH-023 支持状态过滤与分页）。
+     *
+     * <p>分页元数据（total）通过响应头 {@code X-Total-Count} 返回，保持响应体为授权数组
+     * （与前端 {@code LicenseSummary[]} 契约兼容）。</p>
      */
     @GetMapping
-    public ResponseEntity<List<LicenseSummary>> listLicenses() {
-        return ResponseEntity.ok(licenseAdminService.listLicenses());
+    public ResponseEntity<List<LicenseSummary>> listLicenses(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        long total = licenseAdminService.countLicenses(status);
+        List<LicenseSummary> result = licenseAdminService.listLicenses(status, page, size);
+        return ResponseEntity.ok()
+                .header("X-Total-Count", String.valueOf(total))
+                .body(result);
     }
 
     /**

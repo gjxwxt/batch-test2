@@ -94,9 +94,8 @@ class AuditServiceTest {
     }
 
     @Test
-    @DisplayName("AuditOperationType exposes all 13 audit event types")
-    void shouldExposeAllThirteenAuditEventTypes() {
-        assertThat(AuditOperationType.values()).hasSize(13);
+    @DisplayName("AuditOperationType exposes all audit event types (13 core + extended)")
+    void shouldExposeAllAuditEventTypes() {
         assertThat(AuditOperationType.values())
                 .containsExactlyInAnyOrder(
                         AuditOperationType.LOGIN,
@@ -111,7 +110,14 @@ class AuditServiceTest {
                         AuditOperationType.CONFIG_UPDATE,
                         AuditOperationType.CONFIG_RELOAD,
                         AuditOperationType.AUDIT_QUERY,
-                        AuditOperationType.STATISTICS_QUERY
+                        AuditOperationType.STATISTICS_QUERY,
+                        AuditOperationType.REGISTER,
+                        AuditOperationType.HEARTBEAT,
+                        AuditOperationType.FILE_APPLY,
+                        AuditOperationType.TIMEOUT,
+                        AuditOperationType.ARCHIVE,
+                        AuditOperationType.INSTANCE_DELETE,
+                        AuditOperationType.INSTANCE_RECOVER
                 );
     }
 }

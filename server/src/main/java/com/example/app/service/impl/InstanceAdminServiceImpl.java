@@ -2,11 +2,13 @@ package com.example.app.service.impl;
 
 import com.example.app.exception.ErrorCode;
 import com.example.app.exception.LicenseException;
+import com.example.app.model.AuditOperationType;
 import com.example.app.model.HistoryInstance;
 import com.example.app.model.Instance;
 import com.example.app.repository.HistoryInstanceRepository;
 import com.example.app.repository.InstanceRepository;
 import com.example.app.repository.SystemConfigRepository;
+import com.example.app.service.AuditService;
 import com.example.app.service.InstanceAdminService;
 import org.springframework.stereotype.Service;
 
@@ -26,34 +28,49 @@ public class InstanceAdminServiceImpl implements InstanceAdminService {
     private final InstanceRepository instanceRepository;
     private final HistoryInstanceRepository historyInstanceRepository;
     private final SystemConfigRepository systemConfigRepository;
+    private final AuditService auditService;
 
     public InstanceAdminServiceImpl(InstanceRepository instanceRepository,
                                     HistoryInstanceRepository historyInstanceRepository,
-                                    SystemConfigRepository systemConfigRepository) {
+                                    SystemConfigRepository systemConfigRepository,
+                                    AuditService auditService) {
         this.instanceRepository = instanceRepository;
         this.historyInstanceRepository = historyInstanceRepository;
         this.systemConfigRepository = systemConfigRepository;
+        this.auditService = auditService;
     }
 
     @Override
     public List<Instance> listOnlineInstances() {
-        return instanceRepository.findByStatus(Instance.STATUS_ONLINE);
+        List<Instance> result = instanceRepository.findByStatus(Instance.STATUS_ONLINE);
+        auditService.record(AuditOperationType.INSTANCE_QUERY, "admin", null,
+                null, "SUCCESS", "查询在线实例，共 " + result.size() + " 条");
+        return result;
     }
 
     @Override
     public List<Instance> listOfflineInstances() {
-        return instanceRepository.findByStatus(Instance.STATUS_OFFLINE);
+        List<Instance> result = instanceRepository.findByStatus(Instance.STATUS_OFFLINE);
+        auditService.record(AuditOperationType.INSTANCE_QUERY, "admin", null,
+                null, "SUCCESS", "查询下线实例，共 " + result.size() + " 条");
+        return result;
     }
 
     @Override
     public List<HistoryInstance> listHistoryInstances() {
-        return historyInstanceRepository.findAll();
+        List<HistoryInstance> result = historyInstanceRepository.findAll();
+        auditService.record(AuditOperationType.INSTANCE_QUERY, "admin", null,
+                null, "SUCCESS", "查询历史实例，共 " + result.size() + " 条");
+        return result;
     }
 
     @Override
     public Instance getInstance(Long id) {
-        return instanceRepository.findById(id)
+        Instance instance = instanceRepository.findById(id)
                 .orElseThrow(() -> new LicenseException(ErrorCode.INSTANCE_002, "实例不存在：" + id));
+        auditService.record(AuditOperationType.INSTANCE_QUERY, "admin", null,
+                instance.instanceId(), "SUCCESS", "查看实例详情：" + instance.instanceId());
+        return instance;
     }
 
     @Override
@@ -97,6 +114,8 @@ public class InstanceAdminServiceImpl implements InstanceAdminService {
                         now
                 );
                 instanceRepository.save(offline);
+                auditService.record(AuditOperationType.TIMEOUT, "system", null,
+                        instance.instanceId(), "SUCCESS", "心跳超时，实例下线：" + instance.instanceId());
                 marked++;
             }
         }
@@ -116,6 +135,8 @@ public class InstanceAdminServiceImpl implements InstanceAdminService {
             if (Duration.between(offlineTime, now).toDays() >= archiveDays) {
                 historyInstanceRepository.save(HistoryInstance.from(instance, now));
                 instanceRepository.deleteById(instance.id());
+                auditService.record(AuditOperationType.ARCHIVE, "system", null,
+                        instance.instanceId(), "SUCCESS", "实例归档：" + instance.instanceId());
                 archived++;
             }
         }
@@ -134,6 +155,8 @@ public class InstanceAdminServiceImpl implements InstanceAdminService {
             }
             if (Duration.between(archivedTime, now).toDays() >= deleteDays) {
                 historyInstanceRepository.deleteById(history.id());
+                auditService.record(AuditOperationType.INSTANCE_DELETE, "system", null,
+                        history.instanceId(), "SUCCESS", "历史实例删除：" + history.instanceId());
                 deleted++;
             }
         }

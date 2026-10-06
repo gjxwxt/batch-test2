@@ -4,6 +4,7 @@ import com.example.app.exception.ResourceNotFoundException;
 import com.example.app.model.HeartbeatConfigRequest;
 import com.example.app.model.SystemConfig;
 import com.example.app.repository.SystemConfigRepository;
+import com.example.app.service.AuditService;
 import com.example.app.service.impl.SystemConfigServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,11 +29,14 @@ class SystemConfigServiceTest {
     @Mock
     private SystemConfigRepository systemConfigRepository;
 
+    @Mock
+    private AuditService auditService;
+
     private SystemConfigService systemConfigService;
 
     @BeforeEach
     void setUp() {
-        systemConfigService = new SystemConfigServiceImpl(systemConfigRepository);
+        systemConfigService = new SystemConfigServiceImpl(systemConfigRepository, auditService);
     }
 
     @Test

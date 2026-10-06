@@ -40,7 +40,10 @@ public class AuditConfigController {
             @RequestParam(required = false) String result,
             @RequestParam(required = false) String targetId) {
         AuditLogQuery query = new AuditLogQuery(operationType, operator, result, targetId);
-        return ResponseEntity.ok(auditService.query(query));
+        List<AuditLog> logs = auditService.query(query);
+        auditService.record(AuditOperationType.AUDIT_QUERY, "admin", null,
+                null, "SUCCESS", "查询审计日志，共 " + logs.size() + " 条");
+        return ResponseEntity.ok(logs);
     }
 
     @GetMapping("/config")

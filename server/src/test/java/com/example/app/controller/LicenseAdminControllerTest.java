@@ -98,12 +98,14 @@ class LicenseAdminControllerTest {
     @DisplayName("GET /api/v1/admin/licenses 返回授权列表")
     void shouldListLicenses() throws Exception {
         LicenseSummary summary = LicenseSummary.from(sampleLicense());
-        when(licenseAdminService.listLicenses()).thenReturn(List.of(summary));
+        when(licenseAdminService.countLicenses(any())).thenReturn(1L);
+        when(licenseAdminService.listLicenses(any(), any(), any())).thenReturn(List.of(summary));
 
         mockMvc.perform(get("/api/v1/admin/licenses")
                         .header("Authorization", "Bearer valid-token")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
+                .andExpect(header().string("X-Total-Count", "1"))
                 .andExpect(jsonPath("$[0].serial").value("serial-001"))
                 .andExpect(jsonPath("$[0].status").value("ACTIVE"));
     }

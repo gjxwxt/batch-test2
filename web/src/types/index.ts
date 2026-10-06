@@ -274,4 +274,5 @@ export interface FileApplyResponse {
   mode: string
   status: string
   message: string
+  licenseFile?: string
 }

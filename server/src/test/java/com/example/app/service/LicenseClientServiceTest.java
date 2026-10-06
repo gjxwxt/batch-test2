@@ -4,6 +4,8 @@ import com.example.app.exception.ErrorCode;
 import com.example.app.exception.LicenseException;
 import com.example.app.license.CommunicationKeyProvider;
 import com.example.app.license.CommunicationSignature;
+import com.example.app.license.LicenseFileGenerator;
+import com.example.app.license.LicenseSigningKeyProvider;
 import com.example.app.model.FileApplyRequest;
 import com.example.app.model.FileApplyResponse;
 import com.example.app.model.HeartbeatConfigResponse;
@@ -14,9 +16,11 @@ import com.example.app.model.License;
 import com.example.app.model.PublicKeyResponse;
 import com.example.app.model.RegisterRequest;
 import com.example.app.model.RegisterResponse;
+import com.example.app.repository.AuditLogRepository;
 import com.example.app.repository.InstanceRepository;
 import com.example.app.repository.LicenseRepository;
 import com.example.app.repository.SystemConfigRepository;
+import com.example.app.service.impl.AuditServiceImpl;
 import com.example.app.service.impl.LicenseClientServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -49,7 +53,10 @@ class LicenseClientServiceTest {
         systemConfigRepository = new SystemConfigRepository();
         keyProvider = new CommunicationKeyProvider(null);
         privateKey = keyProvider.getPrivateKey();
-        service = new LicenseClientServiceImpl(keyProvider, licenseRepository, instanceRepository, systemConfigRepository);
+        AuditServiceImpl auditService = new AuditServiceImpl(new AuditLogRepository());
+        LicenseFileGenerator licenseFileGenerator = new LicenseFileGenerator(new LicenseSigningKeyProvider(""));
+        service = new LicenseClientServiceImpl(keyProvider, licenseRepository, instanceRepository,
+                systemConfigRepository, auditService, licenseFileGenerator);
     }
 
     @Test
@@ -203,7 +210,66 @@ class LicenseClientServiceTest {
     }
 
     @Test
-    @DisplayName("local 模式授权文件申请成功返回待签发申请单")
+    @DisplayName("AUTH-040 授权已禁用时心跳抛出 INSTANCE_003")
+    void shouldRejectHeartbeatWhenLicenseDisabled() {
+        License license = seedLicense("serial-hb-disabled", 10);
+        service.register(signedRegister("serial-hb-disabled", "client-uuid-hb-d"));
+        // 禁用授权
+        License disabled = new License(
+                license.id(), license.serial(), license.licenseName(), license.proname(),
+                license.component(), license.version(), license.licensee(), license.licenseMode(),
+                license.formal(), license.expiration(), license.userinfor(), license.maxInstances(),
+                license.maxCpus(), license.maxMemory(), license.usedInstances(),
+                license.remainingInstances(), license.usedCpus(), license.usedMemory(),
+                license.bxbFile(), License.STATUS_DISABLED, license.source(),
+                license.createTime(), Instant.now());
+        licenseRepository.save(disabled);
+
+        HeartbeatRequest request = signedHeartbeat("client-uuid-hb-d", "serial-hb-disabled");
+
+        assertThatThrownBy(() -> service.heartbeat(request))
+                .isInstanceOf(LicenseException.class)
+                .extracting(e -> ((LicenseException) e).getErrorCode())
+                .isEqualTo(ErrorCode.INSTANCE_003);
+    }
+
+    @Test
+    @DisplayName("AUTH-038 下线实例恢复心跳时重新占用配额")
+    void shouldReacquireQuotaOnOfflineRecovery() {
+        seedLicense("serial-hb-recover", 10);
+        service.register(signedRegister("serial-hb-recover", "client-uuid-hb-r"));
+        // 模拟实例被标记 OFFLINE（超时下线）
+        Instance online = instanceRepository.findByInstanceId("client-uuid-hb-r").orElseThrow();
+        Instance offline = new Instance(
+                online.id(), online.instanceId(), online.licenseId(), online.clientUuid(),
+                online.proname(), online.productType(), online.productVersion(), online.productSpec(),
+                online.hostname(), online.ipAddress(), online.mac(), online.machineType(),
+                online.currentCpus(), online.currentMemory(), online.extendedAttributes(),
+                Instance.STATUS_OFFLINE, online.onlineTime(), online.lastHeartbeatTime(),
+                Instant.now(), online.createTime(), Instant.now());
+        instanceRepository.save(offline);
+        // 释放配额（模拟超时下线时配额释放）
+        License before = licenseRepository.findBySerial("serial-hb-recover").orElseThrow();
+        License released = new License(
+                before.id(), before.serial(), before.licenseName(), before.proname(),
+                before.component(), before.version(), before.licensee(), before.licenseMode(),
+                before.formal(), before.expiration(), before.userinfor(), before.maxInstances(),
+                before.maxCpus(), before.maxMemory(), 0, before.maxInstances(), 0, 0,
+                before.bxbFile(), before.status(), before.source(), before.createTime(), Instant.now());
+        licenseRepository.save(released);
+
+        HeartbeatRequest request = signedHeartbeat("client-uuid-hb-r", "serial-hb-recover");
+        HeartbeatResponse response = service.heartbeat(request);
+
+        assertThat(response.status()).isEqualTo(Instance.STATUS_ONLINE);
+        License after = licenseRepository.findBySerial("serial-hb-recover").orElseThrow();
+        assertThat(after.usedInstances()).isEqualTo(1);
+        Instance recovered = instanceRepository.findByInstanceId("client-uuid-hb-r").orElseThrow();
+        assertThat(recovered.status()).isEqualTo(Instance.STATUS_ONLINE);
+    }
+
+    @Test
+    @DisplayName("local 模式授权文件申请成功返回授权文件内容")
     void shouldApplyFileForLocalMode() {
         FileApplyRequest request = new FileApplyRequest(
                 "local", "InforSuite AS", "企业版", "示例客户", 10, null, null);
@@ -212,8 +278,11 @@ class LicenseClientServiceTest {
 
         assertThat(response.applyId()).isNotBlank();
         assertThat(response.mode()).isEqualTo("local");
-        assertThat(response.status()).isEqualTo("PENDING");
-        assertThat(response.message()).contains("待签发");
+        assertThat(response.status()).isEqualTo("SUCCESS");
+        assertThat(response.licenseFile()).isNotBlank();
+        assertThat(response.licenseFile()).contains("<license>");
+        assertThat(response.licenseFile()).contains("<mode>local</mode>");
+        assertThat(response.licenseFile()).contains("<signature>");
     }
 
     @Test

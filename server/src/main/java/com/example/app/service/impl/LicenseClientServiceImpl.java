@@ -4,6 +4,8 @@ import com.example.app.exception.ErrorCode;
 import com.example.app.exception.LicenseException;
 import com.example.app.license.CommunicationKeyProvider;
 import com.example.app.license.CommunicationSignature;
+import com.example.app.license.LicenseFileGenerator;
+import com.example.app.model.AuditOperationType;
 import com.example.app.model.FileApplyRequest;
 import com.example.app.model.FileApplyResponse;
 import com.example.app.model.HeartbeatConfigResponse;
@@ -17,10 +19,13 @@ import com.example.app.model.RegisterResponse;
 import com.example.app.repository.InstanceRepository;
 import com.example.app.repository.LicenseRepository;
 import com.example.app.repository.SystemConfigRepository;
+import com.example.app.service.AuditService;
 import com.example.app.service.LicenseClientService;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -33,15 +38,21 @@ public class LicenseClientServiceImpl implements LicenseClientService {
     private final LicenseRepository licenseRepository;
     private final InstanceRepository instanceRepository;
     private final SystemConfigRepository systemConfigRepository;
+    private final AuditService auditService;
+    private final LicenseFileGenerator licenseFileGenerator;
 
     public LicenseClientServiceImpl(CommunicationKeyProvider communicationKeyProvider,
                                     LicenseRepository licenseRepository,
                                     InstanceRepository instanceRepository,
-                                    SystemConfigRepository systemConfigRepository) {
+                                    SystemConfigRepository systemConfigRepository,
+                                    AuditService auditService,
+                                    LicenseFileGenerator licenseFileGenerator) {
         this.communicationKeyProvider = communicationKeyProvider;
         this.licenseRepository = licenseRepository;
         this.instanceRepository = instanceRepository;
         this.systemConfigRepository = systemConfigRepository;
+        this.auditService = auditService;
+        this.licenseFileGenerator = licenseFileGenerator;
     }
 
     @Override
@@ -134,6 +145,8 @@ public class LicenseClientServiceImpl implements LicenseClientService {
         String message = elastic
                 ? "弹性运行模式：实例数已超过基础配额（" + max + "），当前 " + used
                 : "注册成功";
+        auditService.record(AuditOperationType.REGISTER, "client", null,
+                license.serial(), code, "实例注册：" + instanceId + "（" + message + "）");
         return new RegisterResponse(code, instanceId, Instance.STATUS_ONLINE, interval, message);
     }
 
@@ -147,7 +160,27 @@ public class LicenseClientServiceImpl implements LicenseClientService {
                 .orElseThrow(() -> new LicenseException(ErrorCode.INSTANCE_002,
                         "实例不存在：" + request.instanceId()));
 
-        // 3. 更新心跳时间
+        // 3. 授权有效性校验（AUTH-040）：授权已禁用/过期 → INSTANCE_003，客户端继续心跳但告警
+        License license = licenseRepository.findById(instance.licenseId()).orElse(null);
+        if (license != null && (license.isDisabled()
+                || license.isExpired() || license.isPastExpiration())) {
+            auditService.record(AuditOperationType.HEARTBEAT, "client", null,
+                    request.instanceId(), "WARNING", "授权失效，心跳告警：" + license.serial());
+            throw new LicenseException(ErrorCode.INSTANCE_003,
+                    "授权已失效（禁用或过期）：" + license.serial());
+        }
+
+        // 5. 下线恢复（AUTH-038）：实例曾因超时被标记 OFFLINE，现恢复心跳 → 重新占用配额
+        boolean recovering = !Instance.STATUS_ONLINE.equals(instance.status());
+        if (recovering && license != null) {
+            int elasticMultiplier = getElasticQuotaMultiplier();
+            licenseRepository.tryAcquireInstanceQuota(license.id(), elasticMultiplier);
+            licenseRepository.acquireCpuMemoryQuota(license.id(),
+                    request.currentCpus() != null ? request.currentCpus() : instance.currentCpus(),
+                    request.currentMemory() != null ? request.currentMemory() : instance.currentMemory());
+        }
+
+        // 6. 更新心跳时间
         Instant now = Instant.now();
         Instance updated = new Instance(
                 instance.id(),
@@ -174,6 +207,10 @@ public class LicenseClientServiceImpl implements LicenseClientService {
         );
         instanceRepository.save(updated);
 
+        auditService.record(AuditOperationType.HEARTBEAT, "client", null,
+                request.instanceId(), "SUCCESS",
+                recovering ? "客户端心跳（下线恢复，重新占用配额）：" + request.instanceId()
+                        : "客户端心跳：" + request.instanceId());
         return new HeartbeatResponse(request.instanceId(), Instance.STATUS_ONLINE, now.toString(), "心跳成功");
     }
 
@@ -186,13 +223,34 @@ public class LicenseClientServiceImpl implements LicenseClientService {
                     "授权文件申请仅支持 local/site 模式，当前模式：" + mode);
         }
 
-        // 2. 生成申请单号并返回「待签发」状态（AUTH-071）
-        String applyId = "FA-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        // 2. 生成并签名授权文件（AUTH-042/043：返回 license.infor 内容）
+        String serial = "FA-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        Map<String, String> fields = new LinkedHashMap<>();
+        fields.put("component", "Server");
+        fields.put("version", request.edition() != null ? request.edition() : "1.0");
+        fields.put("licensee", request.licensee() != null ? request.licensee() : "");
+        fields.put("mode", mode.toLowerCase());
+        fields.put("formal", "true");
+        fields.put("expiration", request.expireAt() != null && !request.expireAt().isBlank()
+                ? request.expireAt() : "never");
+        fields.put("userinfor", request.remark() != null ? request.remark() : "");
+        fields.put("proname", request.product() != null ? request.product() : "AS");
+        fields.put("serial", serial);
+        fields.put("center-required", "false");
+        fields.put("max-instances", String.valueOf(request.maxInstances()));
+        fields.put("max-cpus", "");
+        fields.put("max-memory", "");
+        String licenseFile = licenseFileGenerator.generate(fields);
+
+        String applyId = serial;
+        auditService.record(AuditOperationType.FILE_APPLY, "client", null,
+                serial, "SUCCESS", "授权文件申请：" + mode.toLowerCase() + " 模式，序列号 " + serial);
         return new FileApplyResponse(
                 applyId,
                 mode.toLowerCase(),
-                "PENDING",
-                "已提交 " + mode.toLowerCase() + " 授权申请 · 待签发"
+                "SUCCESS",
+                "已生成 " + mode.toLowerCase() + " 模式授权文件",
+                licenseFile
         );
     }
 

@@ -6,6 +6,7 @@ import com.example.app.model.StatisticsAlert;
 import com.example.app.model.StatisticsDashboard;
 import com.example.app.model.StatisticsOverview;
 import com.example.app.model.StatisticsTrend;
+import com.example.app.service.AuditService;
 import com.example.app.service.StatisticsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +41,9 @@ class AdminStatisticsControllerTest {
 
     @MockBean
     private StatisticsService statisticsService;
+
+    @MockBean
+    private AuditService auditService;
 
     @MockBean
     private JwtTokenService jwtTokenService;

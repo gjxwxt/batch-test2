@@ -185,17 +185,29 @@ public class StatisticsServiceImpl implements StatisticsService {
                     // 非法日期格式忽略
                 }
             }
-            // 配额告警：已用实例数达到或超过上限
+            // 配额告警（AUTH-061）：按 90%/95% 阈值分级
             if (license.maxInstances() != null && license.maxInstances() > 0
-                    && license.usedInstances() != null
-                    && license.usedInstances() >= license.maxInstances()) {
-                alerts.add(new StatisticsAlert(
-                        StatisticsAlert.LEVEL_CRITICAL,
-                        StatisticsAlert.TYPE_QUOTA_WARNING,
-                        "实例配额已用尽：" + license.licenseName()
-                                + "（" + license.usedInstances() + "/" + license.maxInstances() + "）",
-                        license.serial()
-                ));
+                    && license.usedInstances() != null) {
+                int used = license.usedInstances();
+                int max = license.maxInstances();
+                double ratio = (double) used / max;
+                if (ratio >= 0.95) {
+                    alerts.add(new StatisticsAlert(
+                            StatisticsAlert.LEVEL_CRITICAL,
+                            StatisticsAlert.TYPE_QUOTA_WARNING,
+                            "实例配额使用率 ≥95%：" + license.licenseName()
+                                    + "（" + used + "/" + max + "）",
+                            license.serial()
+                    ));
+                } else if (ratio >= 0.90) {
+                    alerts.add(new StatisticsAlert(
+                            StatisticsAlert.LEVEL_WARN,
+                            StatisticsAlert.TYPE_QUOTA_WARNING,
+                            "实例配额使用率 ≥90%：" + license.licenseName()
+                                    + "（" + used + "/" + max + "）",
+                            license.serial()
+                    ));
+                }
             }
         }
 

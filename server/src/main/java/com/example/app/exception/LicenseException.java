@@ -1,7 +1,7 @@
 package com.example.app.exception;
 
 /**
- * 授权业务异常（wp-3 授权管理）。
+ * 授权业务异常（wp-3 授权管理 / wp-4 客户端交互）。
  *
  * <p>携带 {@link ErrorCode}，由 {@link GlobalExceptionHandler} 统一转换为
  * {@link ApiErrorResponse} 并映射正确 HTTP 状态码。</p>

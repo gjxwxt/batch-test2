@@ -72,6 +72,19 @@ make dev-frontend
 npm install && npm run dev
 ```
 
+### 数据源配置
+- **默认 profile**：使用内嵌 H2（PostgreSQL 兼容模式）作为数据源，服务端开箱即启动
+  （`GET /api/v1/health` 返回 `UP`），Flyway 迁移与原子 SQL/CAS 配额（req-28）在本地无
+  PostgreSQL 环境下可运行。
+- **生产 profile**：连接真实 PostgreSQL 12+ 多节点共享库，实现配额强一致（req-28 / O7）：
+  ```bash
+  SPRING_PROFILES_ACTIVE=prod \
+  DB_URL=jdbc:postgresql://<host>:5432/ias_auth \
+  DB_USERNAME=<user> DB_PASSWORD=<pass> \
+  ./gradlew bootRun
+  ```
+  数据源参数均可通过环境变量注入（`DB_URL` / `DB_USERNAME` / `DB_PASSWORD` / `DB_DRIVER`）。
+
 ### 运行测试
 ```bash
 # 运行全部测试 (后端 JUnit 5 + 前端 Vitest)

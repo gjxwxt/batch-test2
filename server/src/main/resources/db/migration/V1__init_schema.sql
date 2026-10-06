@@ -22,8 +22,9 @@ COMMENT ON TABLE  admin_user IS '管理员账号';
 COMMENT ON COLUMN admin_user.status IS '1=启用 0=禁用';
 
 -- 初始管理员账号：admin / Admin@123456（BCrypt 哈希，O4）
+-- 哈希与内存种子仓库（AdminUserRepository）一致，经验证匹配 Admin@123456。
 INSERT INTO admin_user (username, password_hash, status)
-VALUES ('admin', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', 1);
+VALUES ('admin', '$2a$10$rbkL4Q3ePh.z5w2SGTkvJuQ0P6l5ui7D7fqNxD5RWuVfdW5oEQE/m', 1);
 
 -- ---------------------------------------------------------------------
 -- 2. 授权表

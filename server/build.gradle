@@ -36,6 +36,10 @@ dependencies {
     // BCrypt password hashing (spring-security-crypto, no full security starter)
     implementation 'org.springframework.security:spring-security-crypto'
 
+    // 内嵌 H2（PostgreSQL 兼容模式）作为默认 profile 数据源，保证服务端开箱即启动（AUTH-004）。
+    // 生产部署使用 prod profile 连接真实 PostgreSQL（application-prod.yml）。
+    runtimeOnly 'com.h2database:h2'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'com.h2database:h2'
     testImplementation 'org.testcontainers:junit-jupiter'
